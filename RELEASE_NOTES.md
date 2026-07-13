@@ -4,7 +4,7 @@ Governed AI-ops for **Ceph** via the **ceph-mgr Dashboard REST API** for AI
 agents, with a built-in governance harness (audit, policy, token/runaway
 budget, undo-token recording, graduated risk tiers) and an encrypted credential
 store. Standalone — no external skill-family dependency. Works against vanilla
-ceph-mgr (cephadm / Proxmox-hosted / MicroCeph) — no croit, no Kubernetes.
+ceph-mgr (cephadm / hypervisor-bundled / MicroCeph) — no croit, no Kubernetes.
 
 > **Preview / mock-only.** All behaviour is validated against mocked Dashboard
 > REST responses; it has not been run against a live Ceph cluster. The fastest

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_list, as_obj, s
+from ceph_aiops.ops._util import _seg, as_list, as_obj, s
 
 _OSD = "/api/osd"
 _FLAGS = "/api/osd/flags"
@@ -97,7 +97,7 @@ def _osd_raw(conn: Any, osd_id: int) -> dict:
 def osd_reweight(conn: Any, osd_id: int, weight: float) -> dict:
     """[WRITE][medium] Set an OSD's reweight (0.0 = drain). Reversible → prior weight."""
     prior = _osd_raw(conn, osd_id).get("weight")
-    conn.post(f"{_OSD}/{osd_id}/reweight", json={"weight": weight})
+    conn.post(f"{_OSD}/{_seg(osd_id)}/reweight", json={"weight": weight})
     return {"action": "osd_reweight", "osdId": osd_id, "weight": weight,
             "priorState": {"weight": prior}}
 
@@ -106,7 +106,7 @@ def mark_osd(conn: Any, osd_id: int, action: str) -> dict:
     """[WRITE] Mark an OSD in/out/down. Captures prior up/in state for undo/audit."""
     raw = _osd_raw(conn, osd_id)
     prior = {"in": bool(raw.get("in", 0)), "up": bool(raw.get("up", 0))}
-    conn.post(f"{_OSD}/{osd_id}/mark", json={"action": action})
+    conn.post(f"{_OSD}/{_seg(osd_id)}/mark", json={"action": action})
     return {"action": f"mark_osd_{action}", "osdId": osd_id, "priorState": prior}
 
 
@@ -115,5 +115,5 @@ def osd_purge(conn: Any, osd_id: int) -> dict:
     raw = _osd_raw(conn, osd_id)
     prior = {"in": bool(raw.get("in", 0)), "up": bool(raw.get("up", 0)),
              "host": s(raw.get("host"))}
-    conn.delete(f"{_OSD}/{osd_id}")
+    conn.delete(f"{_OSD}/{_seg(osd_id)}")
     return {"action": "osd_purge", "osdId": osd_id, "priorState": prior}

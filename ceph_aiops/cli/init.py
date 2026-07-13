@@ -1,9 +1,9 @@
 """``ceph-aiops init`` — a friendly, interactive onboarding wizard.
 
-Walks a new user through connecting their first Ceph SCALE target: collects
-the non-secret connection details into ``config.yaml`` and the API key into the
-*encrypted* store (never plaintext on disk). Designed to be run on a terminal;
-everything it needs is prompted with sensible defaults.
+Walks a new user through connecting their first Ceph target: collects
+the non-secret connection details into ``config.yaml`` and the Dashboard
+password into the *encrypted* store (never plaintext on disk). Designed to be
+run on a terminal; everything it needs is prompted with sensible defaults.
 """
 
 from __future__ import annotations
@@ -15,7 +15,44 @@ import yaml
 
 from ceph_aiops.cli._common import cli_errors, console
 from ceph_aiops.config import CONFIG_DIR, CONFIG_FILE, DEFAULT_MGR_PORT, DEFAULT_USERNAME
+from ceph_aiops.governance.paths import ops_path
 from ceph_aiops.secretstore import SecretStore, resolve_master_password
+
+# Starter policy: keeps the secure-by-default gate (high/critical writes need a
+# named approver) explicit and editable, and shows the other rule kinds.
+DEFAULT_RULES_YAML = """\
+# ceph-aiops policy rules — hot-reloaded on change (no restart needed).
+# Kinds: deny rules, maintenance_window, risk_tiers (graduated autonomy).
+
+risk_tiers:
+  - name: high-risk-requires-approver
+    tier: dual
+    min_risk_level: high
+    reason: >-
+      High/critical writes need a named human approver — set
+      CEPH_AUDIT_APPROVED_BY (and CEPH_AUDIT_RATIONALE) before the call.
+
+# deny:
+#   - name: no-prod-destructive-ops
+#     operations: ["pool_delete", "osd_purge", "rbd_*"]
+#     environments: ["production"]
+#     reason: "Pool deletes / OSD purges in production go through change management."
+
+# maintenance_window:
+#   start: "22:00"
+#   end: "06:00"
+"""
+
+
+def _write_default_rules() -> None:
+    """Seed a starter rules.yaml (only when none exists) so the policy layer
+    is explicit from day one; never overwrites an operator-authored file."""
+    rules_path = ops_path("rules.yaml")
+    if rules_path.exists():
+        return
+    rules_path.parent.mkdir(parents=True, exist_ok=True)
+    rules_path.write_text(DEFAULT_RULES_YAML, "utf-8")
+    console.print(f"[green]✓ Wrote default policy rules:[/] {rules_path}")
 
 
 def _load_existing_targets() -> list[dict]:
@@ -66,8 +103,9 @@ def init_cmd() -> None:
         host = typer.prompt("Host (IP or FQDN of the active ceph-mgr)").strip()
         port = typer.prompt("Dashboard HTTPS port", default=DEFAULT_MGR_PORT, type=int)
         username = typer.prompt("Dashboard username", default=DEFAULT_USERNAME).strip()
+        console.print("[dim]Lab / self-signed mgr certificates: answer No here.[/]")
         verify_ssl = typer.confirm(
-            "Verify TLS certificate? (No for self-signed lab certs)", default=False
+            "Verify TLS certificate? (No for self-signed lab certs)", default=True
         )
 
         console.print(
@@ -92,6 +130,7 @@ def init_cmd() -> None:
         if not typer.confirm("\nAdd another target?", default=False):
             break
 
+    _write_default_rules()
     console.print(f"\n[green]✓ Setup complete.[/] Config: {CONFIG_FILE}")
     console.print(
         "[dim]Tip: export CEPH_AIOPS_MASTER_PASSWORD=... in your shell profile "

@@ -9,7 +9,7 @@ Governed AI-ops for **Ceph** — talks to a vanilla **ceph-mgr Dashboard REST AP
 `POST /api/auth`) with a **built-in governance harness**: unified audit log,
 policy engine, token/runaway budget guard, undo-token recording, and
 graduated-autonomy risk tiers. Works against stock ceph-mgr — **cephadm**,
-**Proxmox-hosted Ceph**, or **MicroCeph** — with **no croit and no Kubernetes
+**hypervisor-bundled Ceph**, or **MicroCeph** — with **no croit and no Kubernetes
 dependency**. Self-contained: no external skill-family dependency.
 **Preview — mock-validated only, not yet verified against a live cluster.**
 
@@ -103,7 +103,7 @@ Every MCP tool passes through the bundled `@governed_tool` harness:
 ## Supported scope & limitations
 
 - **Deployments**: vanilla ceph-mgr with the **dashboard** module enabled —
-  cephadm, Proxmox-hosted Ceph, or MicroCeph. **No croit, no Kubernetes
+  cephadm, hypervisor-bundled Ceph, or MicroCeph. **No croit, no Kubernetes
   dependency.**
 - **Ceph has no ETag / pagination** on the Dashboard API, so this tool exposes
   none — nothing is missing, the upstream API simply doesn't offer them.

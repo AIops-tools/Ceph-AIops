@@ -105,3 +105,21 @@ def test_set_pool_quota_undo_restores_prior(monkeypatch):
     assert d["params"]["max_bytes"] == 1000  # restore prior
     assert d["params"]["max_objects"] == 50
     assert result.get("_undo_id") == "undo-1"
+
+
+@pytest.mark.unit
+def test_pool_path_segments_are_url_encoded():
+    """A hostile pool name containing ``../`` must never reach the mgr as a raw
+    path traversal — every agent-supplied path segment is URL-encoded."""
+    from ceph_aiops.ops import pool as ops
+
+    conn = MagicMock(name="conn")
+    conn.get.return_value = {"pool_name": "x", "size": 3, "min_size": 2}
+    conn.put.return_value = {}
+    ops.set_pool_size(conn, "../admin", 2)
+
+    get_path = conn.get.call_args[0][0]
+    put_path = conn.put.call_args[0][0]
+    for path in (get_path, put_path):
+        assert "../" not in path
+        assert path == "/api/pool/..%2Fadmin"

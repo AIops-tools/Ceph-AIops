@@ -24,6 +24,7 @@ expose ``status_code``, ``content``, ``text``, and ``json()``.
 
 from __future__ import annotations
 
+import atexit
 from typing import Any
 
 import httpx
@@ -169,6 +170,10 @@ class ConnectionManager:
     def __init__(self, config: AppConfig) -> None:
         self._config = config
         self._connections: dict[str, CephConnection] = {}
+        # Close any cached httpx clients on interpreter exit so long-running
+        # processes (MCP server) do not leak sockets. Idempotent: disconnect_all
+        # on an already-empty manager is a no-op.
+        atexit.register(self.disconnect_all)
 
     @classmethod
     def from_config(cls, config: AppConfig | None = None) -> ConnectionManager:

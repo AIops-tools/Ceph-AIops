@@ -13,14 +13,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_list, s
+from ceph_aiops.ops._util import _seg, as_list, s
 
 _IMAGE = "/api/block/image"
 
 
 def _spec(pool_name: str, image_name: str) -> str:
-    """URL-encoded ``pool%2Fname`` spec the Dashboard uses to address one image."""
-    return f"{pool_name}%2F{image_name}"
+    """URL-encoded ``pool%2Fname`` spec the Dashboard uses to address one image.
+
+    Both parts go through ``_seg`` so hostile names cannot alter the URL path.
+    """
+    return f"{_seg(pool_name)}%2F{_seg(image_name)}"
 
 
 def _norm_image(raw: dict) -> dict:
@@ -72,6 +75,6 @@ def delete_image(conn: Any, pool_name: str, image_name: str) -> dict:
 
 def delete_snapshot(conn: Any, pool_name: str, image_name: str, snap_name: str) -> dict:
     """[WRITE][high] Delete an RBD image snapshot. Irreversible."""
-    conn.delete(f"{_IMAGE}/{_spec(pool_name, image_name)}/snap/{snap_name}")
+    conn.delete(f"{_IMAGE}/{_spec(pool_name, image_name)}/snap/{_seg(snap_name)}")
     return {"action": "rbd_snapshot_delete", "imageSpec": f"{pool_name}/{image_name}",
             "snapName": s(snap_name)}

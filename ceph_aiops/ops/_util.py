@@ -3,14 +3,26 @@
 Ceph Dashboard REST endpoints return either a bare JSON array (e.g. ``/api/osd``)
 or a JSON object (e.g. ``/api/health/full``). ``as_list`` / ``as_obj`` normalise
 both. All API-returned text reaches the caller only after ``sanitize()``
-(prompt-injection defense).
+(output hygiene: control/format-char stripping + truncation). ``_seg`` URL-encodes
+one path segment so agent-supplied identifiers cannot alter the request path.
 """
 
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from ceph_aiops.governance import sanitize
+
+
+def _seg(value: Any) -> str:
+    """URL-encode a single REST path segment.
+
+    Agent-supplied identifiers (pool names, OSD ids, PG ids, snapshot names)
+    are interpolated into Dashboard URL paths; encoding with ``safe=""`` keeps
+    a hostile value like ``../admin`` from changing the requested path.
+    """
+    return quote(str(value), safe="")
 
 
 def as_list(data: Any) -> list[dict]:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_list, as_obj, s
+from ceph_aiops.ops._util import _seg, as_list, as_obj, s
 
 _POOL = "/api/pool"
 
@@ -92,13 +92,13 @@ def set_pool_quota(
     conn: Any, pool_name: str, max_bytes: int | None = None, max_objects: int | None = None
 ) -> dict:
     """[WRITE][medium] Set a pool's byte/object quota. Reversible → prior quota."""
-    prior = as_obj(conn.get(f"{_POOL}/{pool_name}"))
+    prior = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
     body: dict[str, Any] = {"pool": pool_name}
     if max_bytes is not None:
         body["quota_max_bytes"] = max_bytes
     if max_objects is not None:
         body["quota_max_objects"] = max_objects
-    conn.put(f"{_POOL}/{pool_name}", json=body)
+    conn.put(f"{_POOL}/{_seg(pool_name)}", json=body)
     return {
         "action": "set_pool_quota",
         "poolName": s(pool_name),
@@ -111,8 +111,8 @@ def set_pool_quota(
 
 def set_pool_pg_num(conn: Any, pool_name: str, pg_num: int) -> dict:
     """[WRITE][medium] Set a pool's pg_num. Reversible → prior pg_num."""
-    prior = as_obj(conn.get(f"{_POOL}/{pool_name}"))
-    conn.put(f"{_POOL}/{pool_name}", json={"pool": pool_name, "pg_num": pg_num})
+    prior = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
+    conn.put(f"{_POOL}/{_seg(pool_name)}", json={"pool": pool_name, "pg_num": pg_num})
     return {
         "action": "set_pool_pg_num",
         "poolName": s(pool_name),
@@ -123,8 +123,8 @@ def set_pool_pg_num(conn: Any, pool_name: str, pg_num: int) -> dict:
 
 def set_pool_autoscale(conn: Any, pool_name: str, mode: str) -> dict:
     """[WRITE][medium] Set a pool's PG autoscale mode (on/off/warn). Reversible → prior."""
-    prior = as_obj(conn.get(f"{_POOL}/{pool_name}"))
-    conn.put(f"{_POOL}/{pool_name}", json={"pool": pool_name, "pg_autoscale_mode": mode})
+    prior = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
+    conn.put(f"{_POOL}/{_seg(pool_name)}", json={"pool": pool_name, "pg_autoscale_mode": mode})
     return {
         "action": "set_pool_autoscale",
         "poolName": s(pool_name),
@@ -155,8 +155,8 @@ def create_pool(
 
 def set_pool_size(conn: Any, pool_name: str, size: int) -> dict:
     """[WRITE][high] Set a pool's replica size — forces mass data movement on a live pool."""
-    prior = as_obj(conn.get(f"{_POOL}/{pool_name}"))
-    conn.put(f"{_POOL}/{pool_name}", json={"pool": pool_name, "size": size})
+    prior = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
+    conn.put(f"{_POOL}/{_seg(pool_name)}", json={"pool": pool_name, "size": size})
     return {
         "action": "set_pool_size",
         "poolName": s(pool_name),
@@ -167,8 +167,8 @@ def set_pool_size(conn: Any, pool_name: str, size: int) -> dict:
 
 def delete_pool(conn: Any, pool_name: str) -> dict:
     """[WRITE][high] Delete a pool — destroys all of its data. Irreversible."""
-    prior = as_obj(conn.get(f"{_POOL}/{pool_name}"))
-    conn.delete(f"{_POOL}/{pool_name}")
+    prior = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
+    conn.delete(f"{_POOL}/{_seg(pool_name)}")
     return {
         "action": "pool_delete",
         "poolName": s(pool_name),

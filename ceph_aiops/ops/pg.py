@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_obj, s
+from ceph_aiops.ops._util import _seg, as_obj, s
 
 _HEALTH_FULL = "/api/health/full"
 _PG = "/api/pg"
@@ -145,11 +145,11 @@ def scrub_status(conn: Any) -> dict:
 
 def trigger_scrub(conn: Any, pgid: str) -> dict:
     """[WRITE][low] Schedule a shallow scrub on a PG. No prior state to capture."""
-    conn.post(f"{_PG}/{pgid}/scrub", json={})
+    conn.post(f"{_PG}/{_seg(pgid)}/scrub", json={})
     return {"action": "trigger_scrub", "pgid": s(pgid)}
 
 
 def trigger_deep_scrub(conn: Any, pgid: str) -> dict:
     """[WRITE][low] Schedule a deep (data-integrity) scrub on a PG."""
-    conn.post(f"{_PG}/{pgid}/deep_scrub", json={})
+    conn.post(f"{_PG}/{_seg(pgid)}/deep_scrub", json={})
     return {"action": "trigger_deep_scrub", "pgid": s(pgid)}

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_obj, s
+from ceph_aiops.ops._util import _seg, as_obj, s
 
 _HEALTH_FULL = "/api/health/full"
 _MONITOR = "/api/monitor"
@@ -147,7 +147,7 @@ def capacity_forecast(conn: Any, daily_growth_bytes: int | None = None) -> dict:
 def _conf_value(conn: Any, name: str) -> Any:
     """Best-effort current value of an osd config option; None if unreadable."""
     try:
-        raw = as_obj(conn.get(f"{_CLUSTER_CONF}/{name}"))
+        raw = as_obj(conn.get(f"{_CLUSTER_CONF}/{_seg(name)}"))
     except Exception:  # noqa: BLE001 — prior state is best-effort
         return None
     value = raw.get("value")

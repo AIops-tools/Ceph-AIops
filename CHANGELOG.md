@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.2.0 — 2026-07-13
+
+Security-hardening release from a line-wide code review.
+
+### Changed (behavior)
+- **Secure by default**: with no `rules.yaml`, high/critical operations now require a
+  named approver (`CEPH_AUDIT_APPROVED_BY`). A fresh install no longer allows
+  destructive writes unattended; `init` seeds a starter `rules.yaml` you can edit,
+  and an operator-authored rules file is honoured as-is.
+- `__version__` is now single-sourced from package metadata (the previous release
+  self-reported a stale version string).
+- Sanitize docs no longer overstate scope: it strips control/format characters and
+  truncates; semantic prompt-injection resistance must come from the consuming agent.
+
+### Fixed
+- Agent-supplied ids are percent-encoded in REST URL paths (path-traversal hardening, 20 sites).
+- `init` TLS verification prompt now defaults to ON.
+- Docs wording: deployment flavors now vendor-neutral ("hypervisor-bundled Ceph").
+- Cached HTTP connections are closed at process exit.
+
+### Tests
+- Governance persistence is now tested against REAL `audit.db`/`undo.db` files
+  (write → audit row + inverse undo row with captured prior state).
+- The CLI confirmed-write path (dry-run / double-confirm / governed execution) is
+  covered end-to-end.
+- `pytest-cov` added to the dev dependencies.
+
 ## v0.1.1
 
 - Fix: `CEPH_AIOPS_HOME` now also relocates `config.yaml` (was hardcoded to `~/.ceph-aiops`).
@@ -13,7 +40,7 @@ to [Semantic Versioning](https://semver.org/).
 
 Initial preview release: governed AI-ops for **Ceph** via the ceph-mgr Dashboard
 REST API, with a bundled governance harness. Works against vanilla ceph-mgr
-(cephadm / Proxmox-hosted / MicroCeph) — no croit, no Kubernetes.
+(cephadm / hypervisor-bundled / MicroCeph) — no croit, no Kubernetes.
 **Mock-validated only — not yet verified against a live cluster.**
 
 ### Added
