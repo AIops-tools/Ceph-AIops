@@ -23,9 +23,10 @@ from pathlib import Path
 
 import yaml
 
+from ceph_aiops.governance.paths import ops_home
 from ceph_aiops.secretstore import SecretStoreError, get_secret, has_store
 
-CONFIG_DIR = Path.home() / ".ceph-aiops"
+CONFIG_DIR = ops_home()
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
 ENV_FILE = CONFIG_DIR / ".env"
 

@@ -1,4 +1,10 @@
-"""``ceph-aiops osd`` — OSD reads + guarded lifecycle writes."""
+"""``ceph-aiops osd`` — OSD reads + guarded lifecycle writes.
+
+Real writes (reweight, mark-out, purge) are delegated to the
+``@governed_tool``-wrapped functions in ``mcp_server.tools.osd`` so that CLI
+writes are audited + undo-recorded on the SAME governance path as the MCP tools
+(the CLI keeps its own dry-run preview and human double-confirm on top).
+"""
 
 from __future__ import annotations
 
@@ -55,41 +61,38 @@ def osd_reweight(
     dry_run: DryRunOption = False,
 ) -> None:
     """Set an OSD's reweight (0.0 drains it)."""
-    from ceph_aiops.ops import osd as ops
+    from mcp_server.tools import osd as gov
 
     if dry_run:
         dry_run_print(operation="osd_reweight",
                       api_call=f"POST /api/osd/{osd_id}/reweight",
                       parameters={"weight": weight})
         return
-    conn, _ = get_connection(target)
-    console.print_json(json.dumps(ops.osd_reweight(conn, osd_id, weight)))
+    console.print_json(json.dumps(gov.osd_reweight(osd_id=osd_id, weight=weight, target=target)))
 
 
 @osd_app.command("out")
 @cli_errors
 def osd_out(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = False) -> None:
     """Mark an OSD out — drains its data (dry-run + double confirm)."""
-    from ceph_aiops.ops import osd as ops
+    from mcp_server.tools import osd as gov
 
     if dry_run:
         dry_run_print(operation="mark_osd_out", api_call=f"POST /api/osd/{osd_id}/mark",
                       parameters={"action": "out"})
         return
     double_confirm("mark out OSD", str(osd_id))
-    conn, _ = get_connection(target)
-    console.print_json(json.dumps(ops.mark_osd(conn, osd_id, "out")))
+    console.print_json(json.dumps(gov.osd_mark_out(osd_id=osd_id, target=target)))
 
 
 @osd_app.command("purge")
 @cli_errors
 def osd_purge(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = False) -> None:
     """Purge an OSD — irreversible (dry-run + double confirm)."""
-    from ceph_aiops.ops import osd as ops
+    from mcp_server.tools import osd as gov
 
     if dry_run:
         dry_run_print(operation="osd_purge", api_call=f"DELETE /api/osd/{osd_id}")
         return
     double_confirm("purge OSD", str(osd_id))
-    conn, _ = get_connection(target)
-    console.print_json(json.dumps(ops.osd_purge(conn, osd_id)))
+    console.print_json(json.dumps(gov.osd_purge(osd_id=osd_id, target=target)))
