@@ -88,6 +88,7 @@ ceph-aiops doctor
 1. `ceph-aiops osd df` → confirm which OSD, and that the cluster has room to rebalance
 2. `ceph-aiops osd reweight <id> 0.0` → start draining (reversible → prior weight recorded)
 3. `ceph-aiops osd out <id> --dry-run` then re-run without `--dry-run` (double confirm, **high** risk — set `CEPH_AUDIT_APPROVED_BY`/`CEPH_AUDIT_RATIONALE`) → marks out, drains data
+- **Secure by default (v0.2.0+)**: with no `~/.ceph-aiops/rules.yaml`, high/critical operations are denied unless `CEPH_AUDIT_APPROVED_BY` names an approver (set `CEPH_AUDIT_RATIONALE` too). `ceph-aiops init` seeds a starter rules.yaml; an operator-authored rules file is honoured as-is.
 4. Wait for backfill to finish (`pg_summary` shows all active+clean)
 5. `ceph-aiops osd purge <id> --dry-run` then re-run without `--dry-run` (double confirm, **high**, irreversible)
 
