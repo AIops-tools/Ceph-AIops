@@ -11,6 +11,7 @@ from ceph_aiops.cli.init import init_cmd
 from ceph_aiops.cli.osd import osd_app
 from ceph_aiops.cli.overview import overview_cmd
 from ceph_aiops.cli.secret import secret_app
+from ceph_aiops.cli.undo import undo_app
 
 app = typer.Typer(
     name="ceph-aiops",
@@ -22,6 +23,7 @@ app = typer.Typer(
 app.add_typer(health_app, name="health")
 app.add_typer(osd_app, name="osd")
 app.add_typer(secret_app, name="secret")
+app.add_typer(undo_app, name="undo")
 app.command("init")(init_cmd)
 app.command("overview")(overview_cmd)
 app.command("doctor")(doctor_cmd)
