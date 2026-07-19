@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import _seg, as_list, s
+from ceph_aiops.ops._util import _seg, as_list, opt_s, s
 
 _IMAGE = "/api/block/image"
 
@@ -32,8 +32,8 @@ def _norm_image(raw: dict) -> dict:
     features = raw.get("features_name") or raw.get("features") or []
     return {
         "imageSpec": s(raw.get("unique_id") or f"{raw.get('pool_name')}/{raw.get('name')}"),
-        "poolName": s(raw.get("pool_name")),
-        "name": s(raw.get("name")),
+        "poolName": opt_s(raw.get("pool_name")),
+        "name": opt_s(raw.get("name")),
         "sizeBytes": raw.get("size"),
         "objSizeBytes": raw.get("obj_size"),
         "features": [s(f) for f in features] if isinstance(features, list) else [],
@@ -58,7 +58,7 @@ def create_image(conn: Any, pool_name: str, name: str, size_bytes: int) -> dict:
 
 
 def create_snapshot(conn: Any, pool_name: str, image_name: str, snap_name: str) -> dict:
-    """[WRITE][low] Snapshot an RBD image. Reversible → delete the snapshot."""
+    """[WRITE][medium] Snapshot an RBD image. Reversible → delete the snapshot."""
     conn.post(f"{_IMAGE}/{_spec(pool_name, image_name)}/snap",
               json={"snapshot_name": snap_name})
     return {"action": "rbd_snapshot_create", "imageSpec": f"{pool_name}/{image_name}",

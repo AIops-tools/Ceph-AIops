@@ -1,57 +1,60 @@
-# Ceph AIops v0.1.0 — preview
+# Release notes — ceph-aiops 0.4.0
 
-Governed AI-ops for **Ceph** via the **ceph-mgr Dashboard REST API** for AI
-agents, with a built-in governance harness (audit, policy, token/runaway
-budget, undo-token recording, graduated risk tiers) and an encrypted credential
-store. Standalone — no external skill-family dependency. Works against vanilla
-ceph-mgr (cephadm / hypervisor-bundled / MicroCeph) — no croit, no Kubernetes.
+Previous release: 0.3.0.
 
-> **Preview / mock-only.** All behaviour is validated against mocked Dashboard
-> REST responses; it has not been run against a live Ceph cluster. The fastest
-> live check is a single-node MicroCeph running `ceph-aiops doctor`.
-
-## Highlights
-
-- **35 MCP tools** (17 read, 18 write), every one wrapped with `@governed_tool`:
-  - **Health** — `cluster_health` (flagship: per active HEALTH_WARN/ERR check →
-    plain-language cause + suggested action), `cluster_status`.
-  - **OSD** — `osd_tree`, `osd_df` (most-full first + near/backfill-full flags),
-    `osd_perf`; writes `cluster_flag_set`, `osd_reweight`, `osd_mark_in`,
-    `osd_mark_out` (high), `osd_purge` (high).
-  - **PG** — `pg_summary`, `pg_dump_stuck`, `scrub_status`; `trigger_scrub`,
-    `trigger_deep_scrub`.
-  - **Pool** — `pool_ls`, `pool_df` (usable capacity = raw ÷ size); writes
-    `set_pool_quota`, `set_pool_pg_num`, `set_pool_autoscale`, `pool_create`,
-    `set_pool_size` (high), `pool_delete` (high).
-  - **RBD** — `rbd_ls`; `rbd_image_create`, `rbd_snapshot_create`,
-    `rbd_image_delete` (high), `rbd_snapshot_delete` (high).
-  - **CephFS / RGW** — `cephfs_status`, `rgw_status`.
-  - **Cluster-ops** — `mon_status`, `mgr_status`, `slow_ops`,
-    `capacity_forecast`; `throttle_recovery` (the #1 tuning ask —
-    `osd_max_backfills` / `osd_recovery_max_active`).
-- **HEALTH_WARN root-cause analysis** — `cluster_health` decodes each active
-  check code into cause + action, the differentiator vs raw `ceph -s` proxies.
-- **JWT auth** — username + password exchanged for a short-lived JWT at
-  `POST /api/auth`; the mgr **dashboard** module must be enabled.
-- **Encrypted secret store** (`~/.ceph-aiops/secrets.enc`, Fernet + scrypt) —
-  never plaintext on disk; legacy `CEPH_<TARGET>_PASSWORD` env fallback.
-- **CLI** with an `init` onboarding wizard, `secret` management, and `doctor`.
-- **Dry-run + double-confirm** on the destructive ops operators fear
-  (`osd_purge`, `osd_mark_out`, `pool_delete`, `set_pool_size`,
-  `rbd_image_delete`); reversible writes record an undo descriptor.
-
-## Install
+## Headline: read-only mode
 
 ```bash
-uv tool install ceph-aiops
-ceph-aiops init
-ceph-aiops doctor
+export CEPH_READ_ONLY=1
 ```
 
-## Caveats
+With this set the **19 write tools are never registered** — an MCP
+client lists **18 tools instead of 37**. The writes are not hidden
+behind a flag and not merely refused on call: they are absent from the session,
+so a model cannot invoke one and cannot be argued into one. For a reviewer this
+is checkable rather than promised — connect, list the tools, and the writes are
+not there.
 
-- Preview / mock-only: multi-node rebalance behaviour and the write ops are
-  unverified against a real cluster.
-- The Dashboard API has no ETag / pagination, so this tool exposes none.
-- Out of scope for v0.1.0: RGW multisite, NFS-Ganesha exports, and cephadm
-  orchestrator host management.
+Enforcement is two layers deep: the `@governed_tool` harness refuses every
+non-read operation (covering the CLI and in-process callers too), and the MCP
+server removes write tools from `list_tools()`. Changing entry point does not
+get around it.
+
+### Security fix included in this release
+
+4 tool(s) documented as writes were carrying `risk_level="low"`:
+`trigger_scrub`, `trigger_deep_scrub`, `cluster_flag_set`, `rbd_snapshot_create`.
+
+Because the read/write split keys off `risk_level`, read-only mode would have
+left them **exposed and able to execute real writes**. They are now `medium`,
+and a new test asserts `risk_level` can never again disagree with a tool's own
+`[READ]`/`[WRITE]` documentation.
+
+## BREAKING — return shapes changed
+
+This release changes payloads that callers may be parsing. All three changes exist
+to stop a result from misrepresenting itself:
+
+1. **Absent fields are now `null`, not `""`.** A missing value and an empty value
+   were previously indistinguishable, which invited consumers to invent the
+   difference. Keys are still always present — only the value may be null.
+2. **Anything with a `limit` now returns an envelope** —
+   `{"<items>": [...], "returned": N, "limit": L, "truncated": bool}`. Truncation is
+   *measured* (one extra row is fetched), never inferred from the page happening to
+   be full. Where a genuine pre-cap total is knowable it is reported as `total`;
+   where it isn't, `total` is deliberately omitted rather than echoing `returned`.
+3. **`risk_level` changed on some tools** (see above). If your `rules.yaml` matches
+   on risk level, re-check those rules.
+
+## Also in this release
+
+- **`docs/VERIFICATION.md`** — what the mock suite actually guarantees, a live
+  verification checklist, and the criteria for claiming this tool verified.
+- **`skills/ceph-aiops/references/agent-guardrails.md`** — for driving this tool with a
+  smaller / local model: which guardrails are now enforced for you, and a
+  ready-made system prompt for the rest.
+- Expanded operator playbooks in the skill documentation.
+- The advertised tool count now matches what an MCP client actually lists
+  (it includes `undo_list` / `undo_apply`), and a release gate keeps it honest.
+- The `(preview)` label has been dropped. It never meant unreleased; verification
+  status now lives in `docs/VERIFICATION.md` where it can be specific.

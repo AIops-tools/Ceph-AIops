@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_obj, s
+from ceph_aiops.ops._util import as_obj, opt_s, s
 
 _HEALTH_FULL = "/api/health/full"
 _HEALTH_MINIMAL = "/api/health/minimal"
@@ -110,7 +110,7 @@ _CHECK_RCA: dict[str, tuple[str, str]] = {
 
 def _summary(check: dict) -> str:
     msg = (check.get("summary") or {}).get("message") if isinstance(check, dict) else ""
-    return s(msg or "")
+    return opt_s(msg)
 
 
 def cluster_health(conn: Any) -> dict:
@@ -121,7 +121,7 @@ def cluster_health(conn: Any) -> dict:
         return {"error": s(exc, 200)}
 
     health = raw.get("health") or raw
-    status = s(health.get("status") or health.get("overall_status"))
+    status = opt_s(health.get("status") or health.get("overall_status"))
     checks = health.get("checks") or {}
     findings: list[dict] = []
     if isinstance(checks, dict):
@@ -133,7 +133,7 @@ def cluster_health(conn: Any) -> dict:
         cause, action = _CHECK_RCA.get(code, (_summary(check) or _fallback[0], _fallback[1]))
         findings.append({
             "check": s(code),
-            "severity": s((check or {}).get("severity")),
+            "severity": opt_s((check or {}).get("severity")),
             "summary": _summary(check),
             "cause": cause,
             "suggestedAction": action,
@@ -160,7 +160,7 @@ def cluster_status(conn: Any) -> dict:
     pg = pg_info.get("object_stats", {})
     mon = as_obj(raw.get("mon_status"))
     return {
-        "status": s((raw.get("health") or {}).get("status")),
+        "status": opt_s((raw.get("health") or {}).get("status")),
         "monsInQuorum": mon.get("num_mons") or mon.get("monmap", {}).get("num_mons"),
         "osdsUp": _count(osd, "up"),
         "osdsIn": _count(osd, "in"),

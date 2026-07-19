@@ -1,6 +1,6 @@
 <!-- mcp-name: io.github.AIops-tools/ceph-aiops -->
 
-# Ceph AIops (preview)
+# Ceph AIops
 
 > **Disclaimer**: Community-maintained open-source project. **Not affiliated with, endorsed by, or sponsored by the Ceph project or any storage vendor.** Product and trademark names belong to their owners. MIT licensed.
 
@@ -11,7 +11,6 @@ policy engine, token/runaway budget guard, undo-token recording, and
 graduated-autonomy risk tiers. Works against stock ceph-mgr — **cephadm**,
 **hypervisor-bundled Ceph**, or **MicroCeph** — with **no croit and no Kubernetes
 dependency**. Self-contained: no external skill-family dependency.
-**Preview — mock-validated only, not yet verified against a live cluster.**
 
 ## What it does
 
@@ -28,13 +27,53 @@ The flagship analysis, plus the guarded reads and writes around it:
   (`osd_reweight`, `throttle_recovery`, `cluster_flag_set`, pool quota/pg_num/
   autoscale) records an **undo descriptor** capturing the prior state.
 
+## Security: read-only mode
+
+This tool is meant to be handed to an AI agent, so its safety story is enforced
+by the server rather than requested in a prompt:
+
+```bash
+export CEPH_READ_ONLY=1
+```
+
+With that set, the **19 write tools are never registered**. An MCP client
+lists **18 tools instead of 37** — the writes are not hidden, not
+gated behind a flag, and not merely refused when called. They are absent from
+the session. A model cannot invoke a tool it was never offered, and cannot be
+argued into one.
+
+That distinction is the whole point. A tool that exists but refuses still invites
+retry loops and "I'll describe the call instead" behaviour from smaller models,
+and it leaves a reviewer trusting a promise. An absent tool is a fact you can
+check: connect, list the tools, and see that the writes are not there.
+
+Enforcement is two layers deep, so the switch cannot be sidestepped by changing
+entry point:
+
+| Layer | What it does | Covers |
+|---|---|---|
+| `@governed_tool` harness | refuses every non-read operation outright | MCP, CLI, and in-process callers |
+| MCP registration | write tools are removed from `list_tools()` | anything speaking MCP |
+
+Read operations are unaffected, and every call is still audited to
+`~/.ceph-aiops/audit.db`.
+
+> The read/write split is derived from each tool's declared `risk_level`, and a
+> test asserts that this never disagrees with the `[READ]`/`[WRITE]` tag in the
+> tool's own documentation — so a write can't quietly present itself as a read.
+
+Running a smaller / local model? See
+[agent-guardrails.md](skills/ceph-aiops/references/agent-guardrails.md) — it lists
+the guardrails this tool now enforces for you (so you don't spend prompt budget
+restating them) and gives a ready-made system prompt for what's left.
+
 ## What works
 
 - **CLI** (`ceph-aiops ...`): `init`, `overview`, `health detail`/`health status`,
   `osd tree/df/reweight/out/purge`, `secret set/list/rm/migrate/rotate-password`,
   `doctor`, `mcp`. `osd out` and `osd purge` require `--dry-run` + double confirm.
-- **MCP server** (`ceph-aiops mcp` or `ceph-aiops-mcp`): the full **35 tools**
-  (17 read, 18 write), every one wrapped with the bundled `@governed_tool`
+- **MCP server** (`ceph-aiops mcp` or `ceph-aiops-mcp`): the full **37 tools**
+  (17 read, 18 write, 2 undo), every one wrapped with the bundled `@governed_tool`
   harness. The CLI is a convenience subset; the MCP surface is the whole tool.
 - **Encrypted credentials**: the Dashboard password lives in an encrypted store
   `~/.ceph-aiops/secrets.enc` (Fernet + scrypt) — **never plaintext on disk**.
@@ -47,7 +86,7 @@ The flagship analysis, plus the guarded reads and writes around it:
   `set_pool_size`, `rbd_image_delete`, `rbd_snapshot_delete`) are `high` risk
   with `dry_run` and CLI double confirmation.
 
-## Capability matrix (35 MCP tools)
+## Capability matrix (37 MCP tools)
 
 | Group | Tools | Count | R/W |
 |-------|-------|:-----:|:---:|
@@ -66,8 +105,9 @@ The flagship analysis, plus the guarded reads and writes around it:
 | **CephFS / RGW** | `cephfs_status`, `rgw_status` | 2 | read |
 | **Cluster-ops** | `mon_status`, `mgr_status`, `slow_ops`, `capacity_forecast` | 4 | read |
 | | `throttle_recovery` (med, undo) | 1 | write |
+| **Undo** | `undo_list`, `undo_apply` | 2 | undo |
 
-Totals: **35 tools — 17 read, 18 write.**
+Totals: **37 tools — 17 read, 18 write, 2 undo.**
 
 ## Quick start
 
@@ -107,12 +147,13 @@ Every MCP tool passes through the bundled `@governed_tool` harness:
   dependency.**
 - **Ceph has no ETag / pagination** on the Dashboard API, so this tool exposes
   none — nothing is missing, the upstream API simply doesn't offer them.
-- **Preview / mock-only.** Behaviour is validated against mocked Dashboard
-  responses. The cheapest **live** check is a single-node **MicroCeph**
-  (`snap install microceph` → bootstrap → loop-file OSDs) running
+- **Validation status**: behaviour is exercised against mocked Dashboard
+  responses by the test suite; multi-node rebalance and the write ops have not
+  been run against a live cluster. The cheapest live check is a single-node
+  **MicroCeph** (`snap install microceph` → bootstrap → loop-file OSDs) running
   `ceph-aiops doctor`; a 3-node Vagrant cluster exercises real rebalance
-  behaviour. Multi-node rebalance and the write ops are **unverified against a
-  real cluster**.
+  behaviour. See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for the full
+  live-verification checklist.
 
 ## Missing a capability?
 

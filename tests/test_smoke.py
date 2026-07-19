@@ -119,7 +119,7 @@ def test_every_mcp_tool_is_governed_by_harness():
 def test_write_tools_have_correct_risk_tiers():
     from mcp_server.tools import osd as o
 
-    assert o.cluster_flag_set._risk_level == "low"
+    assert o.cluster_flag_set._risk_level == "medium"  # a write: must vanish in read-only mode
     assert o.osd_reweight._risk_level == "medium"
     assert o.osd_mark_in._risk_level == "medium"
     assert o.osd_mark_out._risk_level == "high"

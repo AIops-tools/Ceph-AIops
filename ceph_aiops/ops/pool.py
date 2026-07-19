@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import _seg, as_list, as_obj, s
+from ceph_aiops.ops._util import _seg, as_list, as_obj, opt_s, s
 
 _POOL = "/api/pool"
 
@@ -27,12 +27,12 @@ def _norm_pool(raw: dict) -> dict:
     else:
         app = ""
     return {
-        "poolName": s(raw.get("pool_name")),
+        "poolName": opt_s(raw.get("pool_name")),
         "poolId": raw.get("pool") if raw.get("pool") is not None else raw.get("pool_id"),
         "size": raw.get("size"),
         "minSize": raw.get("min_size"),
         "pgNum": raw.get("pg_num"),
-        "autoscaleMode": s(raw.get("pg_autoscale_mode")),
+        "autoscaleMode": opt_s(raw.get("pg_autoscale_mode")),
         "application": s(app),
         "quotaMaxBytes": raw.get("quota_max_bytes"),
     }
@@ -75,7 +75,7 @@ def pool_df(conn: Any) -> list[dict]:
             else None
         )
         rows.append({
-            "poolName": s(raw.get("pool_name")),
+            "poolName": opt_s(raw.get("pool_name")),
             "usedBytes": _stat(stats, "bytes_used", "stored"),
             "availBytes": _stat(stats, "max_avail", "avail"),
             "percentUsed": _stat(stats, "percent_used"),
@@ -173,7 +173,7 @@ def delete_pool(conn: Any, pool_name: str) -> dict:
         "action": "pool_delete",
         "poolName": s(pool_name),
         "priorState": {
-            "poolName": s(prior.get("pool_name") or pool_name),
+            "poolName": opt_s(prior.get("pool_name") or pool_name),
             "size": prior.get("size"),
         },
     }

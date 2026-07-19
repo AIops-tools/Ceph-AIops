@@ -1,7 +1,7 @@
 # ceph-aiops setup & security guide
 
-> Preview / mock-only — not yet validated against a live Ceph cluster. The
-> cheapest live check is a single-node MicroCeph running `ceph-aiops doctor`.
+> The cheapest live check is a single-node MicroCeph running `ceph-aiops doctor`.
+> See `docs/VERIFICATION.md` for the full live-verification checklist.
 
 ## 1. Install
 

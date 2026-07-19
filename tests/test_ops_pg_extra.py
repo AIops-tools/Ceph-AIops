@@ -27,9 +27,10 @@ def test_pg_dump_stuck_filters_and_reports_osds():
         ]}
     }
     out = ops.pg_dump_stuck(conn)
-    pgids = {r["pgid"] for r in out}
+    assert out["truncated"] is False and out["returned"] == 2 and out["limit"] == 200
+    pgids = {r["pgid"] for r in out["stuck"]}
     assert pgids == {"2.1", "2.2"}
-    stuck = {r["pgid"]: r for r in out}
+    stuck = {r["pgid"]: r for r in out["stuck"]}
     assert stuck["2.1"]["implicatedOsds"] == [3]
     assert stuck["2.2"]["implicatedOsds"] == [7]
 
@@ -41,7 +42,7 @@ def test_pg_dump_stuck_resilient_to_failure():
     conn = MagicMock(name="conn")
     conn.get.side_effect = RuntimeError("mgr down")
     out = ops.pg_dump_stuck(conn)
-    assert out and "error" in out[0]
+    assert "error" in out
 
 
 @pytest.mark.unit

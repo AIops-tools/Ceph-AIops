@@ -29,7 +29,8 @@ def test_pg_read_twins(monkeypatch):
     summary = pg.pg_summary()
     assert summary["unhealthyCount"] == 1
     stuck = pg.pg_dump_stuck()
-    assert stuck[0]["pgid"] == "2.1"
+    assert stuck["stuck"][0]["pgid"] == "2.1"
+    assert stuck["truncated"] is False
     assert "overdueScrub" in pg.scrub_status()
 
 

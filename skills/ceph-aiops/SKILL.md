@@ -1,10 +1,16 @@
 ---
 name: ceph-aiops
+slug: ceph-aiops
+displayName: "Ceph AIops"
+summary: "Governed Ceph mgr ops: HEALTH_WARN RCA, OSD/PG/pool/RBD/CephFS/RGW, 37 tools."
+license: MIT
+homepage: https://github.com/AIops-tools/Ceph-AIops
+tags: [aiops, mcp, governance, ceph]
 description: >
   Use this skill whenever the user needs to operate or diagnose a Ceph cluster via its ceph-mgr Dashboard REST API — decode a HEALTH_WARN/ERR state into cause + action (cluster_health), read the cluster status, inspect OSDs (tree/df/perf), placement groups (summary/stuck/scrub), pools (list/usable capacity), RBD images and snapshots, CephFS/MDS and RGW status, monitors/managers, slow ops and capacity forecast — plus governed writes (set cluster flags, reweight/mark-in/mark-out/purge OSDs, trigger scrubs, set pool quota/pg_num/autoscale/size, create/delete pools, create/delete RBD images and snapshots, throttle recovery/backfill).
   Always use this skill for "ceph health", "what does this HEALTH_WARN mean", "PG_DEGRADED / OSD_NEARFULL / SLOW_OPS / MON_DOWN", "ceph -s", "which OSD is most full", "drain an OSD", "purge an OSD", "stuck PGs", "overdue scrub", "pool usable capacity", "set pool size / quota", "rebalance is too slow / throttle backfill", "RBD image or snapshot", "MDS behind on trimming", "RGW large omap", "mon quorum", or "days to nearfull" when the context is a Ceph cluster (cephadm, hypervisor-bundled Ceph, or MicroCeph).
   Do NOT use when the target is not Ceph — a hypervisor, a different storage appliance, a backup product, a Kubernetes cluster, or a network device. Route those to the appropriate other AIops-tools skill (negative routing hint only).
-  Preview — common Ceph ops with a built-in governance harness (audit, policy, token budget, undo, risk-tiers). Mock-validated only, not yet verified against a live cluster.
+  Common Ceph ops with a built-in governance harness (audit, policy, token budget, undo, risk-tiers).
 installer:
   kind: uv
   package: ceph-aiops
@@ -13,23 +19,23 @@ allowed-tools:
   - Bash
 metadata: {"openclaw":{"requires":{"env":["CEPH_AIOPS_CONFIG"],"bins":["ceph-aiops"],"config":["~/.ceph-aiops/config.yaml","~/.ceph-aiops/secrets.enc"]},"optional":{"env":["CEPH_AIOPS_MASTER_PASSWORD"]},"primaryEnv":"CEPH_AIOPS_CONFIG","homepage":"https://github.com/AIops-tools/Ceph-AIops","emoji":"🐙","os":["macos","linux"]}}
 compatibility: >
-  Standalone, self-governed Ceph operations (preview). The governance harness (audit, policy, token/runaway budget, undo, risk-tiers) is bundled in the package — no external skill-family dependency. Works against vanilla ceph-mgr (cephadm / hypervisor-bundled Ceph / MicroCeph); no croit and no Kubernetes dependency.
+  Standalone, self-governed Ceph operations. The governance harness (audit, policy, token/runaway budget, undo, risk-tiers) is bundled in the package — no external skill-family dependency. Works against vanilla ceph-mgr (cephadm / hypervisor-bundled Ceph / MicroCeph); no croit and no Kubernetes dependency.
   All write operations are audited to a local SQLite DB under ~/.ceph-aiops/ (relocatable via CEPH_AIOPS_HOME).
   Connection: the ceph-mgr Dashboard REST API over HTTPS (default port 8443). Authentication is username + password exchanged for a short-lived JWT at POST /api/auth; the mgr 'dashboard' module must be enabled. The username lives in config.yaml; the password is stored ENCRYPTED in ~/.ceph-aiops/secrets.enc (Fernet/AES-128 + scrypt-derived key) — never plaintext on disk. Run 'ceph-aiops init' to onboard, or 'ceph-aiops secret set <target>' to add one. The store is unlocked by a master password from CEPH_AIOPS_MASTER_PASSWORD (non-interactive/MCP/CI) or an interactive prompt (CLI on a TTY). A legacy plaintext env var CEPH_<TARGET_NAME_UPPER>_PASSWORD is still honoured as a fallback with a deprecation warning (migrate with 'ceph-aiops secret migrate'). The password is held only in memory and exchanged for a JWT at request time; secrets are never logged or echoed.
   State-changing operations require double confirmation at the CLI layer and support --dry-run. All write tools pass through the @governed_tool decorator (pre-check + budget guard + audit + risk-tier gate). High-risk destructive ops (osd_mark_out, osd_purge, pool_delete, set_pool_size, rbd_image_delete, rbd_snapshot_delete) require dry-run + double confirmation; reversible writes (osd_reweight, cluster_flag_set, set_pool_quota/pg_num/autoscale, throttle_recovery) capture the prior state and record an inverse undo descriptor.
   Webhooks: none — no outbound network calls beyond the configured ceph-mgr Dashboard REST API.
   SSL: verify_ssl defaults to true; disable only for self-signed lab certificates.
   Transitive dependencies: httpx (HTTP client) and the MCP SDK. No post-install scripts or background services.
-  PREVIEW: mock-validated only; multi-node rebalance behaviour and the write ops need live verification (a single-node MicroCeph running 'ceph-aiops doctor' is the cheapest live path). The Dashboard API has no ETag/pagination, so none are exposed.
+  Validation status: behaviour is exercised against mocked Dashboard responses; multi-node rebalance behaviour and the write ops have not been run against a live cluster (a single-node MicroCeph running 'ceph-aiops doctor' is the cheapest live path; see docs/VERIFICATION.md). The Dashboard API has no ETag/pagination, so none are exposed.
 ---
 
-# Ceph AIops (preview)
+# Ceph AIops
 
 > **Disclaimer**: Community-maintained open-source project, **not affiliated with, endorsed by, or sponsored by the Ceph project or any storage vendor.** Product and trademark names belong to their owners. Source at [github.com/AIops-tools/Ceph-AIops](https://github.com/AIops-tools/Ceph-AIops) under the MIT license.
 
-Governed Ceph operations via the **ceph-mgr Dashboard REST API** — **35 MCP tools**, every one wrapped with the bundled `@governed_tool` harness: a local unified audit log under `~/.ceph-aiops/`, policy engine, token/runaway budget guard, undo-token recording, and graduated-autonomy risk tiers. The Dashboard password is stored **encrypted** (`~/.ceph-aiops/secrets.enc`, Fernet + scrypt) — never plaintext on disk. The flagship `cluster_health` turns raw HEALTH_WARN/ERR check codes into plain-language cause + suggested action.
+Governed Ceph operations via the **ceph-mgr Dashboard REST API** — **37 MCP tools**, every one wrapped with the bundled `@governed_tool` harness: a local unified audit log under `~/.ceph-aiops/`, policy engine, token/runaway budget guard, undo-token recording, and graduated-autonomy risk tiers. The Dashboard password is stored **encrypted** (`~/.ceph-aiops/secrets.enc`, Fernet + scrypt) — never plaintext on disk. The flagship `cluster_health` turns raw HEALTH_WARN/ERR check codes into plain-language cause + suggested action.
 
-> **Standalone**: the governance harness is bundled in the package (`ceph_aiops.governance`) — ceph-aiops has no external skill-family dependency. Works against vanilla ceph-mgr (cephadm / hypervisor-bundled / MicroCeph); no croit, no Kubernetes. **Preview / mock-only**: not yet validated against a live cluster.
+> **Standalone**: the governance harness is bundled in the package (`ceph_aiops.governance`) — ceph-aiops has no external skill-family dependency. Works against vanilla ceph-mgr (cephadm / hypervisor-bundled / MicroCeph); no croit, no Kubernetes.
 
 ## What This Skill Does
 
@@ -47,8 +53,9 @@ Governed Ceph operations via the **ceph-mgr Dashboard REST API** — **35 MCP to
 | **CephFS / RGW** | cephfs_status, rgw_status | 2 | 2 read |
 | **Cluster-ops** | mon_status, mgr_status, slow_ops, capacity_forecast | 4 | 4 read |
 | | throttle_recovery | 1 | 1 write |
+| **Undo** | undo_list, undo_apply | 2 | 2 undo |
 
-Totals: **35 tools — 17 read, 18 write.** The MCP server exposes all 35; the CLI is a convenience subset.
+Totals: **37 tools — 17 read, 18 write, 2 undo.** The MCP server exposes all 37; the CLI is a convenience subset.
 
 ## Quick Install
 
@@ -77,29 +84,43 @@ ceph-aiops doctor
 
 ## Common Workflows
 
-### Decode a HEALTH_WARN
+> **Secure by default (v0.2.0+)**: with no `~/.ceph-aiops/rules.yaml`, high/critical operations are denied unless `CEPH_AUDIT_APPROVED_BY` names an approver (set `CEPH_AUDIT_RATIONALE` too). `ceph-aiops init` seeds a starter rules.yaml; an operator-authored rules file is honoured as-is.
 
-1. `ceph-aiops overview` → HEALTH status + the list of active checks
-2. `ceph-aiops health detail` (or the `cluster_health` tool) → each active check code translated into **what it means, likely cause, suggested action**
-3. Drill into the implicated resource — e.g. `PG_DEGRADED` → `pg_dump_stuck`; `OSD_NEARFULL` → `osd_df`; `SLOW_OPS` → `slow_ops`
+### 1. "The cluster went HEALTH_WARN overnight" — decode it (read-only)
 
-### Safely drain + purge an OSD (governed)
+1. `ceph-aiops doctor` → confirm the mgr Dashboard is reachable and the JWT login works before trusting anything else
+2. `ceph-aiops overview` → HEALTH status, the list of active check codes, and OSD up/in counts in one shot
+3. `ceph-aiops health detail` (MCP: `cluster_health`) → each **active** check translated into what it means, the likely cause, and a suggested action
+4. Drill into the implicated resource: `PG_DEGRADED` → `pg_dump_stuck`; `OSD_NEARFULL` → `ceph-aiops osd df` (most-full first); `SLOW_OPS` → `slow_ops`; `MON_DOWN` → `mon_status`; `LARGE_OMAP_OBJECTS` → `rgw_status`
+5. **Failure branch**: if `doctor` fails on auth, the Dashboard password is wrong or the store is locked — re-run `ceph-aiops secret set <target>` (or export `CEPH_AIOPS_MASTER_PASSWORD` for non-interactive use). If `doctor` fails on reachability, the mgr `dashboard` module is likely not enabled; no read is issued against an unauthenticated session.
 
-1. `ceph-aiops osd df` → confirm which OSD, and that the cluster has room to rebalance
-2. `ceph-aiops osd reweight <id> 0.0` → start draining (reversible → prior weight recorded)
-3. `ceph-aiops osd out <id> --dry-run` then re-run without `--dry-run` (double confirm, **high** risk — set `CEPH_AUDIT_APPROVED_BY`/`CEPH_AUDIT_RATIONALE`) → marks out, drains data
-- **Secure by default (v0.2.0+)**: with no `~/.ceph-aiops/rules.yaml`, high/critical operations are denied unless `CEPH_AUDIT_APPROVED_BY` names an approver (set `CEPH_AUDIT_RATIONALE` too). `ceph-aiops init` seeds a starter rules.yaml; an operator-authored rules file is honoured as-is.
-4. Wait for backfill to finish (`pg_summary` shows all active+clean)
-5. `ceph-aiops osd purge <id> --dry-run` then re-run without `--dry-run` (double confirm, **high**, irreversible)
+### 2. Retire a failing OSD: drain, mark out, purge (governed)
 
-### Throttle a slow rebalance
+1. `ceph-aiops health detail` → confirm the OSD is genuinely the problem (e.g. `OSD_SLOW_PING_TIME`, repeated `SLOW_OPS` on one id) rather than a cluster-wide symptom
+2. `ceph-aiops osd df` → confirm the id, and that the remaining OSDs have room to absorb its data before you drain anything
+3. `ceph-aiops osd reweight <id> 0.0` → start a gradual drain; reversible, the prior CRUSH weight is captured as the undo descriptor
+4. `ceph-aiops osd out <id> --dry-run`, then re-run without `--dry-run` → **high** risk, double confirmation, needs `CEPH_AUDIT_APPROVED_BY`
+5. Wait for `ceph-aiops health status` / `pg_summary` to show all PGs `active+clean` — do not purge while backfill is running
+6. `ceph-aiops osd purge <id> --dry-run`, then re-run without `--dry-run` → **high**, irreversible
+7. **Failure branch**: if client I/O tanks during the drain, stop and reverse — `ceph-aiops undo list` then `ceph-aiops undo apply <id>` restores the prior weight (and `osd_mark_in` reverses the mark-out). Purge has no undo, which is exactly why it comes last and after `active+clean`.
 
-`throttle_recovery(max_backfills=1, recovery_max_active=1)` (med, undo → prior `osd_max_backfills` / `osd_recovery_max_active`) — the #1 tuning ask when recovery is starving client I/O. Raise the values again later to speed it back up.
+### 3. Recovery is starving client I/O
 
-### Pool capacity & usable capacity
+1. `ceph-aiops health detail` → confirm the cluster is actually backfilling/recovering (`PG_DEGRADED`, `PG_BACKFILL_FULL`) rather than hitting a different bottleneck
+2. `slow_ops` → check whether client requests are genuinely being blocked, and by which OSDs
+3. `throttle_recovery(max_backfills=1, recovery_max_active=1)` → **med** risk, reversible; the prior `osd_max_backfills` / `osd_recovery_max_active` are captured as the undo descriptor
+4. Re-check `slow_ops` and `pg_summary` — recovery is slower but client latency should recover
+5. Once the cluster is quiet, raise the values back (or `ceph-aiops undo apply <id>` to restore the exact prior settings)
+6. **Failure branch**: if throttling does not help, the bottleneck is not recovery — go back to `osd_perf` (slowest OSDs first) and `mon_status`; do not keep lowering the throttle, you will only extend the degraded window.
 
-1. `pool_df` → per-pool usage with **usable capacity = raw ÷ size** (so a size=3 pool reports a third of raw)
-2. If a pool is short and needs a replica change, `set_pool_size` is **high** risk + dry-run because changing `size` forces data movement across the cluster
+### 4. A pool is running out of usable capacity
+
+1. `ceph-aiops overview` → look for `POOL_NEARFULL` / `OSD_NEARFULL` among the active checks
+2. `pool_df` → per-pool usage with **usable capacity = raw ÷ size** (a `size=3` pool reports a third of raw — this is where most "but the disks aren't full" confusion comes from)
+3. `capacity_forecast` → days-to-nearfull at the current fill rate, so you know whether this is a this-week problem or a this-quarter one
+4. Buy time reversibly first: `set_pool_quota` (med, undo → prior quota) or `set_pool_autoscale` (med, undo) to let pg_num track the new size
+5. Only if a replica change is genuinely the answer: `set_pool_size --dry-run` then the real call — **high** risk, because lowering `size` reduces durability and any change forces cluster-wide data movement
+6. **Failure branch**: if the resulting rebalance saturates the cluster, apply workflow 3 (`throttle_recovery`) rather than reverting the size mid-flight; if the size change itself was wrong, `ceph-aiops undo apply <id>` replays the recorded prior value — but expect a second full rebalance.
 
 ## Governance & Safety
 

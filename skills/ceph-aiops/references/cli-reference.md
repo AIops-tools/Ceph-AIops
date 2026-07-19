@@ -1,6 +1,6 @@
 # ceph-aiops CLI reference
 
-> Preview / mock-only. The CLI is a convenience subset; the full 35-tool surface
+> The CLI is a convenience subset; the full 37-tool surface
 > is via the MCP server (`ceph-aiops mcp`). Talks to the ceph-mgr Dashboard REST
 > API (`https://<host>:8443`, JWT via `POST /api/auth`).
 

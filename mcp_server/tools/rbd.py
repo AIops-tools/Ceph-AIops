@@ -47,11 +47,11 @@ def rbd_image_create(pool_name: str, name: str, size_bytes: int,
 
 
 @mcp.tool()
-@governed_tool(risk_level="low")
+@governed_tool(risk_level="medium")
 @tool_errors("dict")
 def rbd_snapshot_create(pool_name: str, image_name: str, snap_name: str,
                         target: Optional[str] = None) -> dict:
-    """[WRITE][risk=low] Snapshot an RBD image. Reversible → delete the snapshot.
+    """[WRITE][risk=medium] Snapshot an RBD image. Reversible → delete the snapshot.
 
     Args:
         pool_name: Pool the image lives in.

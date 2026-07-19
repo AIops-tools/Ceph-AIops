@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import _seg, as_obj, s
+from ceph_aiops.ops._util import _seg, as_obj, opt_s, s
 
 _HEALTH_FULL = "/api/health/full"
 _MONITOR = "/api/monitor"
@@ -38,7 +38,7 @@ def _names(items: Any) -> list[str]:
 
 def _summary_msg(check: dict) -> str:
     msg = (check.get("summary") or {}).get("message") if isinstance(check, dict) else ""
-    return s(msg or "")
+    return opt_s(msg)
 
 
 def _checks(raw: dict) -> dict:
@@ -72,7 +72,7 @@ def mgr_status(conn: Any) -> dict:
 
     mgr_map = as_obj(raw.get("mgr_map"))
     return {
-        "active": s(mgr_map.get("active_name")),
+        "active": opt_s(mgr_map.get("active_name")),
         "standbys": _names(mgr_map.get("standbys")),
         "modules": [s(m) for m in (mgr_map.get("modules") or []) if m is not None],
     }

@@ -1,8 +1,9 @@
 """Placement Group health + scrub MCP tools (read + low-risk writes).
 
 Reads decode the pgmap/health checks into a state histogram, a stuck-PG list,
-and an overdue-scrub view. The scrub writes are risk=low — they schedule work
-rather than mutate data — so no undo/dry-run is needed.
+and an overdue-scrub view. The scrub writes schedule work rather than mutate
+data, so no undo/dry-run is needed — but they are still writes, so they carry
+risk=medium and disappear in read-only mode along with every other write.
 """
 
 from typing import Optional
@@ -17,30 +18,37 @@ from mcp_server._shared import _get_connection, mcp, tool_errors
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def pg_summary(target: Optional[str] = None) -> dict:
+def pg_summary(target: Optional[str] = None, limit: int = 200) -> dict:
     """[READ] PG state histogram + every PG that is not active+clean.
 
     Call this to answer "are my PGs healthy?" — it counts PGs by state and lists
-    the ones needing attention.
+    the ones needing attention. ``unhealthyCount`` is the true total; the
+    ``unhealthy`` list is capped at ``limit`` and sets ``truncated: true`` when
+    there were more. Re-run with a higher limit rather than treating a truncated
+    result as complete.
 
     Args:
         target: Ceph target name from config; omit for the default.
+        limit: Maximum unhealthy PG rows to return. Default 200.
     """
-    return ops.pg_summary(_get_connection(target))
+    return ops.pg_summary(_get_connection(target), limit=limit)
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def pg_dump_stuck(target: Optional[str] = None) -> list:
+def pg_dump_stuck(target: Optional[str] = None, limit: int = 200) -> dict:
     """[READ] Stuck PGs (inactive/unclean/stale/undersized/degraded) with implicated OSDs.
 
     Use this when a PG is not recovering — it surfaces the OSD ids to investigate.
+    Returns ``{"stuck": [...], "returned": N, "limit": L, "truncated": bool}``;
+    when ``truncated`` is true there are more stuck PGs than were returned.
 
     Args:
         target: Ceph target name from config; omit for the default.
+        limit: Maximum stuck-PG rows to return. Default 200.
     """
-    return ops.pg_dump_stuck(_get_connection(target))
+    return ops.pg_dump_stuck(_get_connection(target), limit=limit)
 
 
 @mcp.tool()
@@ -59,10 +67,10 @@ def scrub_status(target: Optional[str] = None) -> dict:
 
 
 @mcp.tool()
-@governed_tool(risk_level="low")
+@governed_tool(risk_level="medium")
 @tool_errors("dict")
 def trigger_scrub(pgid: str, target: Optional[str] = None) -> dict:
-    """[WRITE][risk=low] Schedule a shallow scrub on a PG (clears a PG_NOT_SCRUBBED warn).
+    """[WRITE][risk=medium] Schedule a shallow scrub on a PG (clears a PG_NOT_SCRUBBED warn).
 
     Args:
         pgid: Placement group id, e.g. "2.1a" (from pg_summary / scrub_status).
@@ -72,10 +80,10 @@ def trigger_scrub(pgid: str, target: Optional[str] = None) -> dict:
 
 
 @mcp.tool()
-@governed_tool(risk_level="low")
+@governed_tool(risk_level="medium")
 @tool_errors("dict")
 def trigger_deep_scrub(pgid: str, target: Optional[str] = None) -> dict:
-    """[WRITE][risk=low] Schedule a deep (data-integrity) scrub on a PG.
+    """[WRITE][risk=medium] Schedule a deep (data-integrity) scrub on a PG.
 
     Args:
         pgid: Placement group id, e.g. "2.1a" (from pg_summary / scrub_status).

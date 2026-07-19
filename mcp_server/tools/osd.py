@@ -85,10 +85,10 @@ def osd_perf(target: Optional[str] = None) -> list:
 
 
 @mcp.tool()
-@governed_tool(risk_level="low", undo=_flag_undo)
+@governed_tool(risk_level="medium", undo=_flag_undo)
 @tool_errors("dict")
 def cluster_flag_set(flag: str, enable: bool = True, target: Optional[str] = None) -> dict:
-    """[WRITE][risk=low] Set/unset a cluster flag (noout/nobackfill/norecover/noscrub…).
+    """[WRITE][risk=medium] Set/unset a cluster flag (noout/nobackfill/norecover/noscrub…).
 
     Heavily used before maintenance (e.g. set noout while rebooting a host).
     Reversible — records an undo that toggles the flag back.

@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
-from ceph_aiops.governance import sanitize
+from ceph_aiops.governance import opt_str, sanitize
 
 
 def _seg(value: Any) -> str:
@@ -42,6 +42,22 @@ def as_obj(data: Any) -> dict:
 def s(value: Any, limit: int = 256) -> str:
     """Sanitize an arbitrary value to a bounded, injection-safe string."""
     return sanitize(str(value if value is not None else ""), limit)
+
+
+def opt_s(value: Any, limit: int = 256) -> str | None:
+    """Sanitize a value that may legitimately be absent, preserving that absence.
+
+    Companion to :func:`s`, which folds ``None`` into ``""``. That conflation is
+    invisible downstream: an empty string reads as "the Dashboard returned this
+    field and it was empty" when the truth may be "this Ceph version never
+    reported the field at all". Neither a consumer nor a smaller local model can
+    recover the difference, and both tend to invent one.
+
+    Use this for any optional Dashboard field (``device_class``, ``host``,
+    ``pg_autoscale_mode``, an MDS ``state``); keep :func:`s` for values that are
+    always present, such as a dict key already in hand.
+    """
+    return opt_str(value, limit)
 
 
 def bytes_h(n: Any) -> str:

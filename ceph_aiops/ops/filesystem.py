@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ceph_aiops.ops._util import as_list, as_obj, s
+from ceph_aiops.ops._util import as_list, as_obj, opt_s, s
 
 _CEPHFS = "/api/cephfs"
 _RGW_DAEMON = "/api/rgw/daemon"
@@ -28,7 +28,7 @@ def _norm_rank(raw: dict) -> dict:
         behind = bool(raw.get("laggy") or raw.get("behindOnTrimming"))
     return {
         "rank": raw.get("rank"),
-        "state": s(raw.get("state")),
+        "state": opt_s(raw.get("state")),
         "behindOnTrimming": behind,
     }
 
@@ -45,7 +45,7 @@ def _norm_fs(raw: dict) -> dict:
     ranks = [_norm_rank(m) for m in members if m.get("rank") is not None and m.get("rank") != -1]
     standby = [m for m in members if m.get("rank") in (None, -1)]
     return {
-        "fsName": s(mdsmap.get("fs_name") or inner.get("name") or raw.get("name")),
+        "fsName": opt_s(mdsmap.get("fs_name") or inner.get("name") or raw.get("name")),
         "mdsRanks": ranks,
         "clientCount": mdsmap.get("num_clients") or inner.get("num_clients"),
         "standbyCount": len(standby),
@@ -73,7 +73,7 @@ def _large_omap_findings(buckets: list[dict]) -> list[dict]:
         oversized = isinstance(num_objects, (int, float)) and num_objects >= 100000
         if unsharded and oversized:
             findings.append({
-                "bucket": s(b.get("bucket") or b.get("bid") or b.get("name")),
+                "bucket": opt_s(b.get("bucket") or b.get("bid") or b.get("name")),
                 "numObjects": num_objects,
                 "numShards": num_shards,
                 "signal": "LARGE_OMAP",
@@ -92,9 +92,9 @@ def rgw_status(conn: Any) -> dict:
     except Exception as exc:  # noqa: BLE001 — report as partial
         return {"error": s(exc, 200)}
     daemons = [
-        {"id": s(d.get("id") or d.get("daemon_id")),
-         "zonegroup": s(d.get("zonegroup")),
-         "zone": s(d.get("zone"))}
+        {"id": opt_s(d.get("id") or d.get("daemon_id")),
+         "zonegroup": opt_s(d.get("zonegroup")),
+         "zone": opt_s(d.get("zone"))}
         for d in as_list(daemons_raw)
     ]
     try:

@@ -34,6 +34,7 @@ def test_pg_summary_builds_state_histogram():
     assert out["states"]["active+undersized+degraded"] == 1
     assert out["unhealthyCount"] == 1
     assert out["unhealthy"][0]["pgid"] == "2.2"
+    assert out["truncated"] is False and out["returned"] == 1
 
 
 @pytest.mark.unit
@@ -61,5 +62,5 @@ def test_trigger_scrub_posts_to_scrub_path():
 def test_scrub_write_tools_have_correct_risk_tiers():
     from mcp_server.tools import pg
 
-    assert pg.trigger_scrub._risk_level == "low"
-    assert pg.trigger_deep_scrub._risk_level == "low"
+    assert pg.trigger_scrub._risk_level == "medium"  # a write: must vanish in read-only mode
+    assert pg.trigger_deep_scrub._risk_level == "medium"

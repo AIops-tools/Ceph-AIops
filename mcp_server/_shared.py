@@ -75,7 +75,7 @@ def tool_errors(shape: str = "dict") -> Callable:
 mcp = FastMCP(
     "ceph-aiops",
     instructions=(
-        "Ceph cluster operations (preview) over the ceph-mgr Dashboard REST API: "
+        "Ceph cluster operations over the ceph-mgr Dashboard REST API: "
         "the flagship 'cluster_health' turns raw HEALTH_WARN/ERR check codes into "
         "plain-language cause + suggested action; plus cluster_status, OSD "
         "inventory (osd_tree/df/perf), PG/pool/RBD/CephFS/RGW reads, slow-ops and "
