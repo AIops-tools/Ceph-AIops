@@ -30,7 +30,7 @@ def test_pool_df_folds_nested_stats_and_usable_capacity():
             "avail_raw": {"latest": 2700},
         },
     }]
-    rows = ops.pool_df(conn)
+    rows = ops.pool_df(conn)["pools"]
     conn.get.assert_called_once_with(_POOL, params={"stats": "true"})
     row = rows[0]
     assert row["poolName"] == "rbd"
@@ -43,12 +43,16 @@ def test_pool_df_folds_nested_stats_and_usable_capacity():
 
 
 @pytest.mark.unit
-def test_pool_df_resilient_returns_empty_on_failure():
+def test_pool_df_reports_failure_instead_of_empty_list():
+    """A flaky mgr must not be indistinguishable from a cluster with no pools."""
     from ceph_aiops.ops import pool as ops
 
     conn = MagicMock(name="conn")
     conn.get.side_effect = RuntimeError("mgr flaky")
-    assert ops.pool_df(conn) == []
+    out = ops.pool_df(conn)
+    assert out["pools"] == []
+    assert out["returned"] == 0
+    assert "mgr flaky" in out["error"]
 
 
 @pytest.mark.unit
@@ -57,7 +61,7 @@ def test_pool_df_usable_none_without_size():
 
     conn = MagicMock(name="conn")
     conn.get.return_value = [{"pool_name": "x", "stats": {"bytes_used": 10}}]
-    row = ops.pool_df(conn)[0]
+    row = ops.pool_df(conn)["pools"][0]
     assert row["usableCapacityBytes"] is None
 
 

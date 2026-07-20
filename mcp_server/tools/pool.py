@@ -78,8 +78,12 @@ def pool_ls(target: Optional[str] = None) -> list:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def pool_df(target: Optional[str] = None) -> list:
+def pool_df(target: Optional[str] = None) -> dict:
     """[READ] Per-pool usage: used/avail bytes, percent, objects, usable capacity.
+
+    Returns {"pools": [...], "returned": N, "error": str | None}. A non-null
+    "error" means the query failed — that is NOT the same as a cluster with no
+    pools, so do not report it as "nothing to worry about".
 
     Args:
         target: Ceph target name from config; omit for the default.

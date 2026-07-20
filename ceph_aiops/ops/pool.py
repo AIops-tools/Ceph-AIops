@@ -54,16 +54,19 @@ def _stat(stats: dict, *keys: str) -> Any:
     return None
 
 
-def pool_df(conn: Any) -> list[dict]:
+def pool_df(conn: Any) -> dict:
     """[READ] Per-pool usage: used/avail bytes, percent, objects, usable capacity.
 
-    Resilient by design: a missing stats block or field degrades to ``None``
-    rather than raising, and a failing call returns an empty list.
+    Returns {"pools": [...], "returned": N, "error": str | None}. A missing stats
+    block or field still degrades to ``None`` per field, but a *failed call* is
+    reported in ``error`` rather than rendered as an empty pool list — a flaky
+    mgr must not be indistinguishable from a cluster with no pools, which would
+    read as "nothing to worry about".
     """
     try:
         pools = as_list(conn.get(_POOL, params={"stats": "true"}))
-    except Exception:  # noqa: BLE001 — a usage probe must survive a flaky mgr
-        return []
+    except Exception as exc:  # noqa: BLE001 — reported, never silently swallowed
+        return {"pools": [], "returned": 0, "error": s(exc, 200)}
     rows: list[dict] = []
     for raw in pools:
         stats = as_obj(raw.get("stats"))
@@ -82,7 +85,7 @@ def pool_df(conn: Any) -> list[dict]:
             "objects": _stat(stats, "objects", "num_objects"),
             "usableCapacityBytes": usable,
         })
-    return rows
+    return {"pools": rows, "returned": len(rows), "error": None}
 
 
 # ── writes ───────────────────────────────────────────────────────────────

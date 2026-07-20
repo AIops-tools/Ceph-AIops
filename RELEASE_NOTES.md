@@ -1,60 +1,18 @@
-# Release notes — ceph-aiops 0.4.0
+# Release notes — ceph-aiops 0.4.1
 
-Previous release: 0.3.0.
+Previous release: 0.4.0.
 
-## Headline: read-only mode
+## Fixed: `pool_df` reported a failed query as "no pools"
 
-```bash
-export CEPH_READ_ONLY=1
-```
+It caught every exception and returned an empty list, so a flaky mgr was
+indistinguishable from a cluster that genuinely has no pools — the failure read as
+"nothing to worry about".
 
-With this set the **19 write tools are never registered** — an MCP
-client lists **18 tools instead of 37**. The writes are not hidden
-behind a flag and not merely refused on call: they are absent from the session,
-so a model cannot invoke one and cannot be argued into one. For a reviewer this
-is checkable rather than promised — connect, list the tools, and the writes are
-not there.
+**BREAKING** — `pool_df` now returns an envelope:
+`{"pools": [...], "returned": N, "error": str | None}`. A non-null `error` means the
+query failed. (The MCP wrapper already declared `@tool_errors("dict")`; its return
+annotation now matches.)
 
-Enforcement is two layers deep: the `@governed_tool` harness refuses every
-non-read operation (covering the CLI and in-process callers too), and the MCP
-server removes write tools from `list_tools()`. Changing entry point does not
-get around it.
-
-### Security fix included in this release
-
-4 tool(s) documented as writes were carrying `risk_level="low"`:
-`trigger_scrub`, `trigger_deep_scrub`, `cluster_flag_set`, `rbd_snapshot_create`.
-
-Because the read/write split keys off `risk_level`, read-only mode would have
-left them **exposed and able to execute real writes**. They are now `medium`,
-and a new test asserts `risk_level` can never again disagree with a tool's own
-`[READ]`/`[WRITE]` documentation.
-
-## BREAKING — return shapes changed
-
-This release changes payloads that callers may be parsing. All three changes exist
-to stop a result from misrepresenting itself:
-
-1. **Absent fields are now `null`, not `""`.** A missing value and an empty value
-   were previously indistinguishable, which invited consumers to invent the
-   difference. Keys are still always present — only the value may be null.
-2. **Anything with a `limit` now returns an envelope** —
-   `{"<items>": [...], "returned": N, "limit": L, "truncated": bool}`. Truncation is
-   *measured* (one extra row is fetched), never inferred from the page happening to
-   be full. Where a genuine pre-cap total is knowable it is reported as `total`;
-   where it isn't, `total` is deliberately omitted rather than echoing `returned`.
-3. **`risk_level` changed on some tools** (see above). If your `rules.yaml` matches
-   on risk level, re-check those rules.
-
-## Also in this release
-
-- **`docs/VERIFICATION.md`** — what the mock suite actually guarantees, a live
-  verification checklist, and the criteria for claiming this tool verified.
-- **`skills/ceph-aiops/references/agent-guardrails.md`** — for driving this tool with a
-  smaller / local model: which guardrails are now enforced for you, and a
-  ready-made system prompt for the rest.
-- Expanded operator playbooks in the skill documentation.
-- The advertised tool count now matches what an MCP client actually lists
-  (it includes `undo_list` / `undo_apply`), and a release gate keeps it honest.
-- The `(preview)` label has been dropped. It never meant unreleased; verification
-  status now lives in `docs/VERIFICATION.md` where it can be specific.
+This is the same defect class found and fixed in `minio-aiops` 0.3.0, where an
+identical `except: return []` hid a much larger bug for the life of the tool. A
+probe failure must never be presentable as health.

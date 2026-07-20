@@ -88,5 +88,5 @@ def test_inventory_read_twins(monkeypatch):
     assert o.osd_df() == []
     assert o.osd_perf() == []
     assert p.pool_ls() == []
-    assert p.pool_df() == []
+    assert p.pool_df() == {"pools": [], "returned": 0, "error": None}
     assert r.rbd_ls() == []
