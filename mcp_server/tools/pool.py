@@ -188,12 +188,19 @@ def pool_delete(pool_name: str, dry_run: bool = False, target: Optional[str] = N
     Pass dry_run=True to preview. Requires an approver (CEPH_AUDIT_APPROVED_BY).
     The classic footgun: there is no undo once the data is gone.
 
+    Refuses .mgr / .rgw.root and any mgr-owned pool: ceph-mgr serves the
+    Dashboard REST API this tool speaks, so deleting its pool severs the
+    transport for every later call. Enforced under dry_run too.
+
     Args:
         pool_name: Pool name (from pool_ls).
         dry_run: If True, preview without deleting.
         target: Ceph target name from config; omit for the default.
     """
     conn = _get_connection(target)
+    # Ahead of the dry_run return: a preview whose real call would be refused
+    # must say so, or the caller reads the refusal as transient and retries.
+    ops.guard_delete_pool(conn, pool_name)
     if dry_run:
         return {"dryRun": True, "wouldDelete": {"poolName": pool_name}}
     return ops.delete_pool(conn, pool_name)

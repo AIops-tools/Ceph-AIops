@@ -209,7 +209,7 @@ def test_osd_reweight_records_prior_state_undo(monkeypatch):
     recorded = {}
 
     class _Store:
-        def record(self, *, skill, tool, undo_descriptor, orig_params):
+        def record(self, *, skill, tool, undo_descriptor, orig_params, effect_verified=True):
             recorded["d"] = undo_descriptor
             return "undo-osd-1"
 

@@ -6,6 +6,13 @@ captures the pool's BEFORE state into ``priorState`` so the harness can record a
 faithful undo (restore prior quota / pg_num / mode / size). The two footgun ops
 — changing replica ``size`` on a live pool (mass data movement) and deleting a
 pool (destroys all its data) — are high-risk and gated with a dry-run preview.
+
+``delete_pool`` additionally refuses the pools this tool's own transport depends
+on (:class:`SelfLockout`). Deleting ``.mgr`` breaks ceph-mgr, which serves the
+Dashboard REST API every call in this package goes through — including undos for
+unrelated work. Ceph's own ``mon_allow_pool_delete`` (off by default) is a real
+external guard, but it is not this tool's, and it is routinely turned on for the
+duration of a cleanup.
 """
 
 from __future__ import annotations
@@ -15,6 +22,28 @@ from typing import Any
 from ceph_aiops.ops._util import _seg, as_list, as_obj, opt_s, s
 
 _POOL = "/api/pool"
+
+# Pools whose loss severs this tool's own transport or the cluster's ability to
+# describe itself. `.mgr` backs ceph-mgr, which serves the Dashboard REST API
+# this package speaks exclusively; `.rgw.root` holds the RGW realm/zone map,
+# without which the object-storage half of the tool cannot resolve anything.
+# The list is STATIC, so there is no fail-open case for the name check.
+_PROTECTED_POOLS: dict[str, str] = {
+    ".mgr": (
+        "it backs ceph-mgr, which serves the Dashboard REST API this tool speaks — "
+        "deleting it severs the transport for every later call, undos included"
+    ),
+    ".rgw.root": (
+        "it holds the RGW realm/zone configuration, without which the object-storage "
+        "half of this tool cannot resolve a thing"
+    ),
+}
+# Applications that mark a pool as mgr-owned even under a non-default name.
+_MGR_APPLICATIONS = {"mgr", "mgr_devicehealth"}
+
+
+class SelfLockout(ValueError):  # noqa: N818 — teaching error, reads as a statement
+    """Refused: the operation would sever this tool's own access to the cluster."""
 
 
 def _norm_pool(raw: dict) -> dict:
@@ -168,8 +197,65 @@ def set_pool_size(conn: Any, pool_name: str, size: int) -> dict:
     }
 
 
+def _mgr_application_reason(conn: Any, pool_name: str) -> str | None:
+    """Whether the pool is marked mgr-owned by its application_metadata.
+
+    Catches a mgr pool under a non-default name. Returns None on any read
+    failure: an unreadable pool is UNKNOWN, and unknown must never read as
+    "it is the mgr pool" — the static name list still covers the default.
+    """
+    try:
+        raw = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
+    except Exception:  # noqa: BLE001 — unknown, never a false "it is protected"
+        return None
+    apps = raw.get("application_metadata") or raw.get("applications") or {}
+    names = (
+        {str(k).lower() for k in apps}
+        if isinstance(apps, (dict, list, tuple, set))
+        else set()
+    )
+    if names & _MGR_APPLICATIONS:
+        return (
+            "its application_metadata marks it a ceph-mgr pool, and ceph-mgr serves "
+            "the Dashboard REST API this tool speaks"
+        )
+    return None
+
+
+def guard_delete_pool(conn: Any, pool_name: str) -> None:
+    """Raise the :class:`SelfLockout` ``delete_pool`` would raise, without deleting.
+
+    Called by ``delete_pool`` itself *and* by the MCP wrapper ahead of its
+    ``dry_run`` early return, so a preview of a protected pool reports the
+    refusal instead of a green ``wouldDelete``. Both paths run this one
+    function, so the preview and the real call can never disagree.
+
+    The name check is static and exact. The application_metadata check needs a
+    read and fails open on any error — an unreadable pool is unknown, not
+    protected.
+    """
+    name = str(pool_name).strip()
+    lockout_reason = _PROTECTED_POOLS.get(name) or _mgr_application_reason(conn, name)
+    if lockout_reason is None:
+        return
+    raise SelfLockout(
+        f"Refusing to delete pool '{name}': {lockout_reason}. A pool delete has "
+        f"no undo, and this one would take the transport down with it — later "
+        f"calls, including undos for unrelated work, would have nothing to talk "
+        f"to. If the cluster really must lose this pool, do it from a node with "
+        f"'ceph osd pool delete' where you can recover ceph-mgr afterwards."
+    )
+
+
 def delete_pool(conn: Any, pool_name: str) -> dict:
-    """[WRITE][high] Delete a pool — destroys all of its data. Irreversible."""
+    """[WRITE][high] Delete a pool — destroys all of its data. Irreversible.
+
+    **Refuses ``.mgr`` / ``.rgw.root`` and any pool whose application_metadata
+    marks it a ceph-mgr pool.** Deleting the mgr pool severs the Dashboard REST
+    API this tool depends on, so the loss is not confined to that pool's data —
+    every later call, including undos for unrelated work, loses its transport.
+    """
+    guard_delete_pool(conn, pool_name)
     prior = as_obj(conn.get(f"{_POOL}/{_seg(pool_name)}"))
     conn.delete(f"{_POOL}/{_seg(pool_name)}")
     return {
