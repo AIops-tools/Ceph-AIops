@@ -22,7 +22,7 @@ compatibility: >
   Standalone, self-governed Ceph operations. The governance harness (audit, policy, token/runaway budget, undo, risk-tiers) is bundled in the package — no external skill-family dependency. Works against vanilla ceph-mgr (cephadm / hypervisor-bundled Ceph / MicroCeph); no croit and no Kubernetes dependency.
   All write operations are audited to a local SQLite DB under ~/.ceph-aiops/ (relocatable via CEPH_AIOPS_HOME).
   Connection: the ceph-mgr Dashboard REST API over HTTPS (default port 8443). Authentication is username + password exchanged for a short-lived JWT at POST /api/auth; the mgr 'dashboard' module must be enabled. The username lives in config.yaml; the password is stored ENCRYPTED in ~/.ceph-aiops/secrets.enc (Fernet/AES-128 + scrypt-derived key) — never plaintext on disk. Run 'ceph-aiops init' to onboard, or 'ceph-aiops secret set <target>' to add one. The store is unlocked by a master password from CEPH_AIOPS_MASTER_PASSWORD (non-interactive/MCP/CI) or an interactive prompt (CLI on a TTY). A legacy plaintext env var CEPH_<TARGET_NAME_UPPER>_PASSWORD is still honoured as a fallback with a deprecation warning (migrate with 'ceph-aiops secret migrate'). The password is held only in memory and exchanged for a JWT at request time; secrets are never logged or echoed.
-  State-changing operations require double confirmation at the CLI layer and support --dry-run. All write tools pass through the @governed_tool decorator (pre-check + budget guard + audit + risk-tier gate). High-risk destructive ops (osd_mark_out, osd_purge, pool_delete, set_pool_size, rbd_image_delete, rbd_snapshot_delete) require dry-run + double confirmation; reversible writes (osd_reweight, cluster_flag_set, set_pool_quota/pg_num/autoscale, throttle_recovery) capture the prior state and record an inverse undo descriptor.
+  State-changing operations require double confirmation at the CLI layer and support --dry-run. All write tools pass through the @governed_tool decorator (pre-check + budget guard + audit + risk-tier label). High-risk destructive ops (osd_mark_out, osd_purge, pool_delete, set_pool_size, rbd_image_delete, rbd_snapshot_delete) require dry-run + double confirmation; reversible writes (osd_reweight, cluster_flag_set, set_pool_quota/pg_num/autoscale, throttle_recovery) capture the prior state and record an inverse undo descriptor.
   Webhooks: none — no outbound network calls beyond the configured ceph-mgr Dashboard REST API.
   SSL: verify_ssl defaults to true; disable only for self-signed lab certificates.
   Transitive dependencies: httpx (HTTP client) and the MCP SDK. No post-install scripts or background services.
@@ -33,7 +33,7 @@ compatibility: >
 
 > **Disclaimer**: Community-maintained open-source project, **not affiliated with, endorsed by, or sponsored by the Ceph project or any storage vendor.** Product and trademark names belong to their owners. Source at [github.com/AIops-tools/Ceph-AIops](https://github.com/AIops-tools/Ceph-AIops) under the MIT license.
 
-Governed Ceph operations via the **ceph-mgr Dashboard REST API** — **37 MCP tools**, every one wrapped with the bundled `@governed_tool` harness: a local unified audit log under `~/.ceph-aiops/`, policy engine, token/runaway budget guard, undo-token recording, and graduated-autonomy risk tiers. The Dashboard password is stored **encrypted** (`~/.ceph-aiops/secrets.enc`, Fernet + scrypt) — never plaintext on disk. The flagship `cluster_health` turns raw HEALTH_WARN/ERR check codes into plain-language cause + suggested action.
+Governed Ceph operations via the **ceph-mgr Dashboard REST API** — **37 MCP tools**, every one wrapped with the bundled `@governed_tool` harness: a local unified audit log under `~/.ceph-aiops/`, token/runaway budget guard, undo-token recording, and descriptive risk tiers. The Dashboard password is stored **encrypted** (`~/.ceph-aiops/secrets.enc`, Fernet + scrypt) — never plaintext on disk. The flagship `cluster_health` turns raw HEALTH_WARN/ERR check codes into plain-language cause + suggested action.
 
 > **Standalone**: the governance harness is bundled in the package (`ceph_aiops.governance`) — ceph-aiops has no external skill-family dependency. Works against vanilla ceph-mgr (cephadm / hypervisor-bundled / MicroCeph); no croit, no Kubernetes.
 
@@ -84,8 +84,6 @@ ceph-aiops doctor
 
 ## Common Workflows
 
-> **Secure by default (v0.2.0+)**: with no `~/.ceph-aiops/rules.yaml`, high/critical operations are denied unless `CEPH_AUDIT_APPROVED_BY` names an approver (set `CEPH_AUDIT_RATIONALE` too). `ceph-aiops init` seeds a starter rules.yaml; an operator-authored rules file is honoured as-is.
-
 ### 1. "The cluster went HEALTH_WARN overnight" — decode it (read-only)
 
 1. `ceph-aiops doctor` → confirm the mgr Dashboard is reachable and the JWT login works before trusting anything else
@@ -124,10 +122,17 @@ ceph-aiops doctor
 
 ## Governance & Safety
 
-- Every tool is audited to `~/.ceph-aiops/audit.db` (relocatable via `CEPH_AIOPS_HOME`).
-- High-risk ops (`osd_purge`, `osd_mark_out`, `pool_delete`, `set_pool_size`, `rbd_image_delete`, `rbd_snapshot_delete`) can require a named approver: set `CEPH_AUDIT_APPROVED_BY` and `CEPH_AUDIT_RATIONALE`.
-- Destructive writes support `--dry-run` and double confirmation at the CLI.
-- Reversible writes record an inverse descriptor capturing the prior state.
+The skill delivers reads and writes and records them; it does **not** decide
+whether a write is permitted. That is your agent's judgement, or the permission
+of the account you connect it with (a ceph-mgr Dashboard account with a
+read-only role — writes then fail at the mgr). There is no read-only switch,
+policy file, or approval gate.
+
+- **Audit is the guarantee, and it is not bypassable.** Every operation — MCP and CLI alike — is logged to `~/.ceph-aiops/audit.db` (relocatable via `CEPH_AIOPS_HOME`): params, result, status, duration, and the risk tier. The CLI writes the same row the MCP path does.
+- `CEPH_AUDIT_APPROVED_BY` / `CEPH_AUDIT_RATIONALE` are optional annotations recorded on the audit row (who/why); they are never required and never block.
+- **Runaway guard** — a safety backstop, not authorization: the same call looped in a tight window trips a circuit breaker. Disable with `CEPH_RUNAWAY_MAX=0`.
+- Destructive writes support `--dry-run` / `dry_run=True` and double confirmation at the CLI.
+- Reversible writes fetch the real before-state and record an inverse descriptor (`osd_reweight`→restore prior weight, `cluster_flag_set`→toggle back); irreversible ops (`osd_purge`, `pool_delete`, RBD deletes) record only the before-state.
 
 ## References
 

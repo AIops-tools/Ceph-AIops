@@ -70,11 +70,12 @@ export CEPH_AIOPS_MASTER_PASSWORD='your-master-password'
   is never logged or echoed; exception text and tracebacks are scrubbed of
   secret-shaped strings before being written to the audit log.
 
-## Approver env vars (high-risk ops)
+## Audit-annotation env vars (optional)
 
-High-risk destructive ops (`osd_purge`, `osd_mark_out`, `pool_delete`,
-`set_pool_size`, `rbd_image_delete`, `rbd_snapshot_delete`) can require a named
-approver:
+The skill does not decide whether a write is permitted — that is the agent's
+judgement or the connecting Dashboard account's role. If you want the audit trail
+to record *who* ran a destructive op and *why*, set these; they are recorded on
+the row, never required, and gate nothing:
 
 ```bash
 export CEPH_AUDIT_APPROVED_BY='you@example.com'
@@ -85,8 +86,7 @@ export CEPH_AUDIT_RATIONALE='why this destructive op is justified'
 
 State lives under `~/.ceph-aiops/` (relocate with `CEPH_AIOPS_HOME`):
 
-- `audit.db` — every tool call (SQLite), with risk tier, approver, rationale
-- `rules.yaml` — policy: deny rules, maintenance windows, approval tiers
+- `audit.db` — every tool call (SQLite), with risk tier and any approver/rationale
 - `undo.db` — inverse descriptors for reversible writes (e.g. `osd_reweight`,
   `set_pool_quota`, `throttle_recovery`)
 - budget / runaway guard — caps cumulative tool calls and wall-time; trips on

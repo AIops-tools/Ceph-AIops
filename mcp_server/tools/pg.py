@@ -3,7 +3,7 @@
 Reads decode the pgmap/health checks into a state histogram, a stuck-PG list,
 and an overdue-scrub view. The scrub writes schedule work rather than mutate
 data, so no undo/dry-run is needed — but they are still writes, so they carry
-risk=medium and disappear in read-only mode along with every other write.
+risk=medium and are tagged ``[WRITE]`` like every other state-changing tool.
 """
 
 from typing import Optional

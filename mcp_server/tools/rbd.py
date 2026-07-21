@@ -69,7 +69,7 @@ def rbd_image_delete(pool_name: str, image_name: str, dry_run: bool = False,
                      target: Optional[str] = None) -> dict:
     """[WRITE][risk=high] Delete an RBD image and ALL its data. Irreversible.
 
-    Pass dry_run=True to preview. Requires an approver (CEPH_AUDIT_APPROVED_BY).
+    Pass dry_run=True to preview.
 
     Args:
         pool_name: Pool the image lives in.
@@ -90,7 +90,7 @@ def rbd_snapshot_delete(pool_name: str, image_name: str, snap_name: str,
                         dry_run: bool = False, target: Optional[str] = None) -> dict:
     """[WRITE][risk=high] Delete an RBD image snapshot. Irreversible.
 
-    Pass dry_run=True to preview. Requires an approver (CEPH_AUDIT_APPROVED_BY).
+    Pass dry_run=True to preview.
 
     Args:
         pool_name: Pool the image lives in.

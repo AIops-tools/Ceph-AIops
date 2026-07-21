@@ -9,16 +9,31 @@ the tool now enforces them itself.
 The distinction matters. A guardrail in a prompt is a request. A guardrail in the
 harness is a guarantee. Anything below that we could move into the harness, we did.
 
-## What the tool now enforces — do not waste prompt budget on these
+## Authorization is not this tool's job — decide it where it belongs
+
+Whether a write should happen is your decision, or the account's. The tool does
+not gate it — there is no read-only switch and no approval prompt to configure.
+The two right places to control read vs write:
+
+- **The account you connect with.** Give it a ceph-mgr Dashboard account with a
+  read-only role. A write then fails at the mgr, which is the only place the
+  permission actually lives — no skill-side flag can be argued around by a
+  model, but a revoked permission cannot be.
+- **Your agent's system prompt.** If you want an observe-only session, tell the
+  model not to call the write tools (they are clearly tagged `[WRITE]`).
+
+What the tool *does* guarantee is that you can always see what happened:
+
+## What the tool enforces — do not waste prompt budget on these
 
 | You might be tempted to prompt | Why you don't need to |
 |---|---|
-| "Work read-only, never modify the cluster" | Set `CEPH_READ_ONLY=1`. Write tools are then **not registered at all** — they never appear in the tool list, so the model cannot call one even if it tries. The `@governed_tool` harness independently refuses writes, so the CLI is covered too. This includes the benign-looking writes: `trigger_scrub`, `trigger_deep_scrub`, `cluster_flag_set`, `rbd_snapshot_create`. |
+| "Log everything you do, over both MCP and the CLI" | Every call is audited to `~/.ceph-aiops/audit.db` regardless of what the model says it did — and the CLI writes the same row the MCP path does, so there is no unaudited entry point. Reversible writes also record an undo token capturing the *prior* state. |
 | "Don't invent a value when a field is missing" | A field the Dashboard did not return comes back as `null`, never as `""`. A missing `deviceClass`, `host`, MDS `state`, or `pg_autoscale_mode` is distinguishable from an empty one in the payload. |
 | "Tell me if the output was cut off" | `pg_summary` and `pg_dump_stuck` return `{"stuck": [...], "returned": N, "limit": L, "truncated": true/false}`. Truncation is measured (one extra row is collected), not guessed. `pg_summary` also keeps `unhealthyCount` as the true total even when the list is capped. |
 | "Explain what HEALTH_WARN means" | `cluster_health` already folds each active check code (`PG_DEGRADED`, `OSD_NEARFULL`, `SLOW_OPS`, `LARGE_OMAP_OBJECTS`, …) into a plain-language `cause` and `suggestedAction`. The model should quote those, not compose its own. |
-| "Confirm before anything destructive" | Destructive operations (`osd_purge`, `pool_delete`, `rbd_image_delete`, `rbd_snapshot_delete`, `set_pool_size`) require a `--dry-run`-able preview + double confirmation at the CLI, and a named approver (`CEPH_AUDIT_APPROVED_BY`) for high-risk tiers. |
-| "Log what you did" | Every call is audited to `~/.ceph-aiops/audit.db` regardless of what the model says it did. |
+| "Confirm before anything destructive" | Destructive operations (`osd_purge`, `pool_delete`, `rbd_image_delete`, `rbd_snapshot_delete`, `set_pool_size`) require a `--dry-run`-able preview + double confirmation at the CLI. |
+| "Don't get stuck retrying" | The runaway guard trips a circuit breaker if the same call is hammered in a tight loop — a stuck agent is stopped rather than left to burn calls and time. |
 
 ## What still needs a prompt
 
@@ -65,17 +80,20 @@ SCOPE
 
 ## Recommended setup for a local model
 
+Start with a connection that *cannot* write, verify, and widen the account's
+permission only when you trust the setup — the destructive operations on a Ceph
+cluster are unusually cheap to invoke and unusually expensive to undo
+(`pool_delete` and `rbd_image_delete` destroy data no undo token can bring back):
+
 ```bash
-# Read-only until you trust the setup — this is enforced, not advisory.
-export CEPH_READ_ONLY=1
+# e.g. use a ceph-mgr Dashboard account with a read-only role. Then:
 ceph-aiops doctor
 ```
 
-Then, when you are ready to allow writes, unset it and set an approver so the
-high-risk tier has an accountable name on it:
+Optionally annotate the audit trail with who is operating and why — recorded on
+every row, never required:
 
 ```bash
-unset CEPH_READ_ONLY
 export CEPH_AUDIT_APPROVED_BY="your.name@example.com"
 export CEPH_AUDIT_RATIONALE="draining osd.7 for disk replacement 2026-07-20"
 ```

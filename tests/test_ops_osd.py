@@ -169,7 +169,7 @@ def test_osd_write_tools_have_correct_risk_tiers():
     assert o.osd_purge._risk_level == "high"
     assert o.osd_reweight._risk_level == "medium"
     assert o.osd_mark_in._risk_level == "medium"
-    assert o.cluster_flag_set._risk_level == "medium"  # a write: must vanish in read-only mode
+    assert o.cluster_flag_set._risk_level == "medium"  # a write (non-low risk_level)
 
 
 @pytest.mark.unit

@@ -134,8 +134,7 @@ def osd_mark_in(osd_id: int, target: Optional[str] = None) -> dict:
 def osd_mark_out(osd_id: int, dry_run: bool = False, target: Optional[str] = None) -> dict:
     """[WRITE][risk=high] Mark an OSD 'out' — drains its data (recovery storm / min_size risk).
 
-    Destructive to redundancy — pass dry_run=True to preview. Requires an approver
-    (set CEPH_AUDIT_APPROVED_BY) under the graduated-autonomy policy.
+    Destructive to redundancy — pass dry_run=True to preview.
 
     Args:
         osd_id: Numeric OSD id (from osd_tree).
@@ -154,7 +153,7 @@ def osd_mark_out(osd_id: int, dry_run: bool = False, target: Optional[str] = Non
 def osd_purge(osd_id: int, dry_run: bool = False, target: Optional[str] = None) -> dict:
     """[WRITE][risk=high] Purge an OSD (destroy + crush rm + auth del). Irreversible.
 
-    Pass dry_run=True to preview. Requires an approver (CEPH_AUDIT_APPROVED_BY).
+    Pass dry_run=True to preview.
     Drain first (osd_reweight 0 → mark out → wait active+clean) before purging.
 
     Args:

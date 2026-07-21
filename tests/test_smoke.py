@@ -119,7 +119,7 @@ def test_every_mcp_tool_is_governed_by_harness():
 def test_write_tools_have_correct_risk_tiers():
     from mcp_server.tools import osd as o
 
-    assert o.cluster_flag_set._risk_level == "medium"  # a write: must vanish in read-only mode
+    assert o.cluster_flag_set._risk_level == "medium"  # a write (non-low risk_level)
     assert o.osd_reweight._risk_level == "medium"
     assert o.osd_mark_in._risk_level == "medium"
     assert o.osd_mark_out._risk_level == "high"
@@ -250,13 +250,26 @@ def test_osd_purge_dry_run_does_not_mutate(monkeypatch):
 
 
 @pytest.mark.unit
-def test_cli_osd_purge_dry_run_gates():
+def test_cli_osd_purge_dry_run_gates(monkeypatch, tmp_path):
+    """The preview runs the governed twin (hence the mocked connection) and
+    renders the banner instead of deleting anything."""
+    import ceph_aiops.governance.audit as audit_mod
+    import mcp_server.tools.osd as gov_osd
     from ceph_aiops.cli import app
 
+    monkeypatch.setenv("CEPH_AIOPS_HOME", str(tmp_path))
+    audit_mod.reset_engine()
+    conn = MagicMock(name="conn")
+    monkeypatch.setattr(gov_osd, "_get_connection", lambda target=None: conn)
+
     runner = CliRunner()
-    result = runner.invoke(app, ["osd", "purge", "3", "--dry-run"])
-    assert result.exit_code == 0
-    assert "DRY-RUN" in result.output
+    try:
+        result = runner.invoke(app, ["osd", "purge", "3", "--dry-run"])
+        assert result.exit_code == 0, result.output
+        assert "DRY-RUN" in result.output
+        conn.delete.assert_not_called()
+    finally:
+        audit_mod.reset_engine()
 
 
 @pytest.mark.unit
@@ -269,3 +282,33 @@ def test_set_cluster_flag_captures_prior():
     out = ops.set_cluster_flag(conn, "noout", enable=True)
     assert out["action"] == "set_cluster_flag" and out["enabled"] is True
     assert out["priorState"]["flags"] == []
+
+
+@pytest.mark.unit
+def test_risk_level_agrees_with_read_write_docstring_tag():
+    """The two write-markers must never drift apart.
+
+    A tool's ``risk_level`` decides its audit tier and whether it gets dry-run /
+    undo handling; its ``[READ]``/``[WRITE]`` docstring tag is what the docs and
+    capability tables are built from. If a ``[WRITE]`` were left ``risk_level=low``
+    it would be audited as a read and skip the write machinery — this test caught
+    16 such mislabels line-wide once, so it is kept even though read-only mode
+    (its original motivation) is gone.
+    """
+    from mcp_server import server
+
+    untagged, mismatched = [], []
+    for name, tool in server.mcp._tool_manager._tools.items():
+        doc = (tool.fn.__doc__ or "").lstrip()
+        if doc.startswith("[READ]"):
+            tagged_as_read = True
+        elif doc.startswith("[WRITE]"):
+            tagged_as_read = False
+        else:
+            untagged.append(name)
+            continue
+        if tagged_as_read != (getattr(tool.fn, "_risk_level", "low") == "low"):
+            mismatched.append(name)
+
+    assert not untagged, f"tools missing a [READ]/[WRITE] docstring tag: {untagged}"
+    assert not mismatched, f"risk_level disagrees with the docstring tag: {mismatched}"

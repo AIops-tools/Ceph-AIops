@@ -37,8 +37,10 @@ Every MCP tool runs through the bundled `@governed_tool` harness
   `CEPH_MAX_TOOL_SECONDS`) plus an on-by-default guard that trips a tight
   poll/retry loop, preventing unbounded API consumption (e.g. polling a slow
   session).
-- **Graduated risk tiers** — `~/.ceph-aiops/rules.yaml` `risk_tiers` gate
-  writes by environment/tag; the highest tiers require a recorded approver.
+- **Risk-tier labelling** — each tool's declared `risk_level` is carried into
+  the audit row as a descriptive tier. It labels the row; it does not gate the
+  call. Whether a write is permitted is the agent's or the account's decision,
+  not the skill's.
 - **Undo-token recording** — reversible writes capture the BEFORE state and
   record an inverse descriptor (e.g. `osd_reweight`→restore prior weight,
   `cluster_flag_set`→toggle the flag back, `throttle_recovery`→restore prior
@@ -47,8 +49,7 @@ Every MCP tool runs through the bundled `@governed_tool` harness
 ### State-Changing Operations
 Destructive writes — `osd_mark_out`, `osd_purge`, `set_pool_size`, `pool_delete`,
 `rbd_image_delete`, `rbd_snapshot_delete` — are `risk_level=high`, accept a
-`dry_run` preview, and (under `risk_tiers`) require a recorded approver
-(`CEPH_AUDIT_APPROVED_BY` + `CEPH_AUDIT_RATIONALE`). The CLI additionally
+`dry_run` preview. `CEPH_AUDIT_APPROVED_BY` / `CEPH_AUDIT_RATIONALE` are optional audit annotations recorded on the row, never required. The CLI additionally
 double-confirms `osd out` and `osd purge` and supports `--dry-run`. Reversible
 medium/low writes capture before-state and, where a safe inverse exists, record
 an undo token. Ceph has no ETag/If-Match and its list endpoints return full

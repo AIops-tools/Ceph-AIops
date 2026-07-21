@@ -121,8 +121,42 @@ def test_cli_undo_apply_dry_run_renders(gov_home):
     result = CliRunner().invoke(app, ["undo", "apply", uid, "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "DRY-RUN" in result.output
+    assert "inverse: _undo_probe" in result.output
     assert _CALLS == []
     assert undo_mod.get_undo_store().get(uid)["status"] == "recorded"
+
+
+@pytest.mark.unit
+def test_cli_undo_apply_dry_run_refusal_exits_nonzero_without_a_banner(gov_home):
+    """An unknown token is a refusal, not a plan naming an inverse tool of '?'.
+
+    Before the reroute this printed a green DRY-RUN banner and exited 0 for a
+    token that does not exist — the preview lying about an operation the real
+    call will reject.
+    """
+    from typer.testing import CliRunner
+
+    from ceph_aiops.cli import app
+
+    result = CliRunner().invoke(app, ["undo", "apply", "deadbeef", "--dry-run"])
+    assert result.exit_code == 1, result.output
+    assert "DRY-RUN" not in result.output
+    assert "Unknown undo id" in result.output
+    assert _CALLS == []
+
+
+@pytest.mark.unit
+def test_cli_undo_apply_dry_run_refuses_an_already_applied_token(gov_home):
+    from typer.testing import CliRunner
+
+    from ceph_aiops.cli import app
+
+    uid = _record()
+    gov.undo_apply(undo_id=uid)
+    result = CliRunner().invoke(app, ["undo", "apply", uid, "--dry-run"])
+    assert result.exit_code == 1, result.output
+    assert "DRY-RUN" not in result.output
+    assert "already 'applied'" in result.output
 
 
 @pytest.mark.unit

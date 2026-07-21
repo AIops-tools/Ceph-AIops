@@ -3,7 +3,14 @@
 Real writes (reweight, mark-out, purge) are delegated to the
 ``@governed_tool``-wrapped functions in ``mcp_server.tools.osd`` so that CLI
 writes are audited + undo-recorded on the SAME governance path as the MCP tools
-(the CLI keeps its own dry-run preview and human double-confirm on top).
+(the CLI keeps its human double-confirm on top).
+
+``--dry-run`` goes through that same governed twin with ``dry_run=True``, so a
+preview runs every guard the real write would and lands its own audit row; the
+result is rendered into the human DRY-RUN banner rather than dumped as JSON. A
+refused preview prints the refusal and exits non-zero instead of a green banner
+for a call that is about to be rejected. ``reweight`` is the one exception: its
+twin takes no ``dry_run`` parameter, so its preview stays a local print.
 """
 
 from __future__ import annotations
@@ -19,6 +26,7 @@ from ceph_aiops.cli._common import (
     cli_errors,
     console,
     double_confirm,
+    dry_run_preview,
     dry_run_print,
     get_connection,
 )
@@ -64,6 +72,8 @@ def osd_reweight(
     from mcp_server.tools import osd as gov
 
     if dry_run:
+        # No governed twin to route through: mcp_server.tools.osd.osd_reweight
+        # takes no dry_run parameter, so this preview stays a local print.
         dry_run_print(operation="osd_reweight",
                       api_call=f"POST /api/osd/{osd_id}/reweight",
                       parameters={"weight": weight})
@@ -78,8 +88,10 @@ def osd_out(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = 
     from mcp_server.tools import osd as gov
 
     if dry_run:
-        dry_run_print(operation="mark_osd_out", api_call=f"POST /api/osd/{osd_id}/mark",
-                      parameters={"action": "out"})
+        dry_run_preview(
+            gov.osd_mark_out(osd_id=osd_id, dry_run=True, target=target),
+            operation="mark_osd_out", api_call=f"POST /api/osd/{osd_id}/mark",
+            parameters={"action": "out"})
         return
     double_confirm("mark out OSD", str(osd_id))
     console.print_json(json.dumps(gov.osd_mark_out(osd_id=osd_id, target=target)))
@@ -92,7 +104,9 @@ def osd_purge(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption 
     from mcp_server.tools import osd as gov
 
     if dry_run:
-        dry_run_print(operation="osd_purge", api_call=f"DELETE /api/osd/{osd_id}")
+        dry_run_preview(
+            gov.osd_purge(osd_id=osd_id, dry_run=True, target=target),
+            operation="osd_purge", api_call=f"DELETE /api/osd/{osd_id}")
         return
     double_confirm("purge OSD", str(osd_id))
     console.print_json(json.dumps(gov.osd_purge(osd_id=osd_id, target=target)))

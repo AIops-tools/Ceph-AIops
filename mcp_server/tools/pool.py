@@ -164,8 +164,12 @@ def set_pool_size(pool_name: str, size: int, dry_run: bool = False,
                   target: Optional[str] = None) -> dict:
     """[WRITE][risk=high] Set a pool's replica size — forces mass data movement on a live pool.
 
-    Pass dry_run=True to preview. Requires an approver (set CEPH_AUDIT_APPROVED_BY)
-    under the graduated-autonomy policy. Reversible → prior size.
+    Pass dry_run=True to preview. Reversible → prior size.
+
+    Refuses a size REDUCTION on .mgr / .rgw.root and any mgr-owned pool: fewer
+    replicas degrades ceph-mgr, which serves the Dashboard REST API this tool
+    speaks — so the recorded undo would have no transport to travel over.
+    RAISING the size on those pools is allowed. Enforced under dry_run too.
 
     Args:
         pool_name: Pool name (from pool_ls).
@@ -174,6 +178,9 @@ def set_pool_size(pool_name: str, size: int, dry_run: bool = False,
         target: Ceph target name from config; omit for the default.
     """
     conn = _get_connection(target)
+    # Ahead of the dry_run return: a preview whose real call would be refused
+    # must say so, or the caller reads the refusal as transient and retries.
+    ops.guard_pool_size(conn, pool_name, size)
     if dry_run:
         return {"dryRun": True, "wouldSetSize": {"poolName": pool_name, "size": size}}
     return ops.set_pool_size(conn, pool_name, size)
@@ -185,7 +192,7 @@ def set_pool_size(pool_name: str, size: int, dry_run: bool = False,
 def pool_delete(pool_name: str, dry_run: bool = False, target: Optional[str] = None) -> dict:
     """[WRITE][risk=high] Delete a pool — destroys all of its data. Irreversible.
 
-    Pass dry_run=True to preview. Requires an approver (CEPH_AUDIT_APPROVED_BY).
+    Pass dry_run=True to preview.
     The classic footgun: there is no undo once the data is gone.
 
     Refuses .mgr / .rgw.root and any mgr-owned pool: ceph-mgr serves the

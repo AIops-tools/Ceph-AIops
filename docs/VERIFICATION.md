@@ -88,13 +88,21 @@ do not silently pass.
 - [ ] While backfilling, `throttle_recovery` measurably slows recovery (compare
       recovery throughput in `ceph -s` before/after).
 
-### 5. Governance actually gates
-- [ ] With no `~/.ceph-aiops/rules.yaml`, a `high`-risk op (`osd_purge`,
-      `pool_delete`, `set_pool_size`) is **refused** unless
-      `CEPH_AUDIT_APPROVED_BY` names an approver (secure-by-default).
-- [ ] With the approver set, the same op proceeds and the audit row records the
-      approver and `CEPH_AUDIT_RATIONALE`.
+### 5. Audit is unbypassable — both entry points
+- [ ] Run a `high`-risk op (`osd_purge`, `pool_delete`, `set_pool_size`) over MCP
+      and the same op over the CLI; confirm **both** land a row in `audit.db`, and
+      that `CEPH_AUDIT_APPROVED_BY` / `CEPH_AUDIT_RATIONALE`, when set, appear on
+      the row (recorded, never required — the skill authorizes nothing).
 - [ ] A failed write is audited with `status=error` and records **no** undo token.
+- [ ] `pool_delete .mgr` is refused (`SelfLockout`), under `dry_run` too, and an
+      ordinary pool still deletes — the guard is exact, not a prefix match.
+- [ ] `set_pool_size .mgr <lower-than-current>` is refused, and the message names
+      the actual change it blocked. Reducing `.mgr` degrades ceph-mgr, which
+      serves the Dashboard REST API the undo would have to travel over.
+- [ ] `set_pool_size .mgr <higher-than-current>` **succeeds** — only the downward
+      direction is a hazard, and a blanket refusal would block the one change
+      that makes the mgr pool safer.
+- [ ] A non-protected pool still resizes downward, proving the guard's exactness.
 - [ ] A tight poll loop trips the runaway budget guard rather than hammering the
       Dashboard API.
 

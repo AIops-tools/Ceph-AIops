@@ -113,8 +113,8 @@ mcp = FastMCP(
         "cluster flags, recovery throttle, OSD reweight/mark-in (reversible), and "
         "OSD mark-out/purge, pool size/pg_num/quota/create/delete, and RBD "
         "image/snapshot ops. Destructive writes (osd out/purge, pool delete, pool "
-        "size change, rbd delete) are risk=high with a dry_run preview and require "
-        "an approver. Every tool runs through the ceph-aiops governance harness "
+        "size change, rbd delete) are risk=high with a dry_run preview. Every "
+        "tool runs through the ceph-aiops governance harness "
         "(audit / budget / risk-tier / undo)."
     ),
 )

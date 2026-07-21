@@ -61,7 +61,7 @@ def test_write_tools_have_correct_risk_tiers():
 
     assert r.rbd_image_delete._risk_level == "high"
     assert r.rbd_snapshot_delete._risk_level == "high"
-    assert r.rbd_snapshot_create._risk_level == "medium"  # a write: must vanish in read-only mode
+    assert r.rbd_snapshot_create._risk_level == "medium"  # a write (non-low risk_level)
     assert r.rbd_image_create._risk_level == "medium"
 
 
