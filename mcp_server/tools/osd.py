@@ -104,15 +104,23 @@ def cluster_flag_set(flag: str, enable: bool = True, target: Optional[str] = Non
 @mcp.tool()
 @governed_tool(risk_level="medium", undo=_reweight_undo)
 @tool_errors("dict")
-def osd_reweight(osd_id: int, weight: float, target: Optional[str] = None) -> dict:
+def osd_reweight(
+    osd_id: int, weight: float, dry_run: bool = False, target: Optional[str] = None
+) -> dict:
     """[WRITE][risk=medium] Set an OSD's reweight (0.0 drains it). Reversible → prior weight.
+
+    Pass dry_run=True to preview the current→target weight without applying it.
 
     Args:
         osd_id: Numeric OSD id (from osd_tree).
         weight: New reweight 0.0–1.0 (0.0 = full drain).
+        dry_run: If True, read the current weight and preview without reweighting.
         target: Ceph target name from config; omit for the default.
     """
-    return ops.osd_reweight(_get_connection(target), osd_id, weight)
+    conn = _get_connection(target)
+    if dry_run:
+        return {"dryRun": True, "wouldReweight": ops.preview_reweight(conn, osd_id, weight)}
+    return ops.osd_reweight(conn, osd_id, weight)
 
 
 @mcp.tool()

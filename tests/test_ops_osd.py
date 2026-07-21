@@ -197,6 +197,20 @@ def test_osd_purge_dry_run_does_not_mutate(monkeypatch):
 
 
 @pytest.mark.unit
+def test_osd_reweight_dry_run_reads_current_weight_without_posting(monkeypatch):
+    from mcp_server.tools import osd as o
+
+    conn = MagicMock(name="conn")
+    conn.get.return_value = _osd_rows()  # OSD 0 has weight 1.0
+    monkeypatch.setattr(o, "_get_connection", lambda target=None: conn)
+    out = o.osd_reweight(osd_id=0, weight=0.3, dry_run=True)
+    assert out["dryRun"] is True
+    assert out["wouldReweight"] == {"osdId": 0, "currentWeight": 1.0, "targetWeight": 0.3}
+    conn.get.assert_called()  # it read the OSD map to capture the current weight
+    conn.post.assert_not_called()
+
+
+@pytest.mark.unit
 def test_osd_reweight_records_prior_state_undo(monkeypatch):
     import ceph_aiops.governance.undo as undo_mod
     from mcp_server.tools import osd as o

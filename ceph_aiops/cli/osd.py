@@ -9,8 +9,7 @@ writes are audited + undo-recorded on the SAME governance path as the MCP tools
 preview runs every guard the real write would and lands its own audit row; the
 result is rendered into the human DRY-RUN banner rather than dumped as JSON. A
 refused preview prints the refusal and exits non-zero instead of a green banner
-for a call that is about to be rejected. ``reweight`` is the one exception: its
-twin takes no ``dry_run`` parameter, so its preview stays a local print.
+for a call that is about to be rejected.
 """
 
 from __future__ import annotations
@@ -27,7 +26,6 @@ from ceph_aiops.cli._common import (
     console,
     double_confirm,
     dry_run_preview,
-    dry_run_print,
     get_connection,
 )
 
@@ -72,11 +70,13 @@ def osd_reweight(
     from mcp_server.tools import osd as gov
 
     if dry_run:
-        # No governed twin to route through: mcp_server.tools.osd.osd_reweight
-        # takes no dry_run parameter, so this preview stays a local print.
-        dry_run_print(operation="osd_reweight",
-                      api_call=f"POST /api/osd/{osd_id}/reweight",
-                      parameters={"weight": weight})
+        # Routed through the governed twin with dry_run=True: the preview reads
+        # the current weight through the same guarded path the real write uses,
+        # so it lands an audit row and a refusal exits non-zero (not a banner).
+        dry_run_preview(
+            gov.osd_reweight(osd_id=osd_id, weight=weight, dry_run=True, target=target),
+            operation="osd_reweight", api_call=f"POST /api/osd/{osd_id}/reweight",
+            parameters={"weight": weight})
         return
     console.print_json(json.dumps(gov.osd_reweight(osd_id=osd_id, weight=weight, target=target)))
 

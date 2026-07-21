@@ -102,6 +102,16 @@ def osd_reweight(conn: Any, osd_id: int, weight: float) -> dict:
             "priorState": {"weight": prior}}
 
 
+def preview_reweight(conn: Any, osd_id: int, weight: float) -> dict:
+    """[READ] Preview an osd_reweight — reads the current weight, changes nothing.
+
+    Reads the same OSD record the real reweight captures as priorState, so the
+    preview reports the exact current→target transition without issuing the POST.
+    """
+    current = _osd_raw(conn, osd_id).get("weight")
+    return {"osdId": osd_id, "currentWeight": current, "targetWeight": weight}
+
+
 def mark_osd(conn: Any, osd_id: int, action: str) -> dict:
     """[WRITE] Mark an OSD in/out/down. Captures prior up/in state for undo/audit."""
     raw = _osd_raw(conn, osd_id)

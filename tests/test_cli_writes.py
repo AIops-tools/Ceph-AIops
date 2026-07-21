@@ -98,6 +98,34 @@ def test_cli_osd_purge_dry_run_writes_nothing_but_is_audited(gov_home, monkeypat
 
 
 @pytest.mark.unit
+def test_cli_osd_reweight_dry_run_reads_and_audits_but_never_writes(gov_home, monkeypatch):
+    """`osd reweight --dry-run` now routes through the twin (was a local print):
+    it reads the OSD's current weight to build the preview, audits, no POST."""
+    from ceph_aiops.cli import app
+
+    conn = _mock_conn(monkeypatch)
+    result = CliRunner().invoke(app, ["osd", "reweight", "3", "0.0", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "DRY-RUN" in result.output
+    assert _mutating_calls(conn) == []
+    conn.get.assert_called()  # it DID read, to capture the current weight
+    assert _audit_tools(gov_home / "audit.db") == ["osd_reweight"]
+
+
+@pytest.mark.unit
+def test_cli_osd_reweight_dry_run_on_unknown_osd_refuses_nonzero(gov_home, monkeypatch):
+    """The point of routing the preview through the twin: reweighting an OSD that
+    does not exist is refused in the preview too, not shown as a green banner."""
+    from ceph_aiops.cli import app
+
+    conn = _mock_conn(monkeypatch)  # only OSD 3 exists
+    result = CliRunner().invoke(app, ["osd", "reweight", "9", "0.0", "--dry-run"])
+    assert result.exit_code == 1, result.output
+    assert "DRY-RUN" not in result.output
+    assert _mutating_calls(conn) == []
+
+
+@pytest.mark.unit
 def test_cli_osd_out_dry_run_reports_a_transport_failure_instead_of_a_banner(
     gov_home, monkeypatch
 ):
