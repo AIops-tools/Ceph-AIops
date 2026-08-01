@@ -1,16 +1,54 @@
 # Live verification — ceph-aiops
 
-`ceph-aiops` is published on PyPI, the MCP Registry, and ClawHub. What it has
-**not** had is an end-to-end run against a live cluster:
+`ceph-aiops` is published on PyPI, the MCP Registry, and ClawHub. As of
+2026-07-31 it has had a **partial live run** against a real ceph-mgr Dashboard
+REST (Ceph 18/reef): sections 1–3 and part of 5 are ticked and three real bugs
+were fixed (see the live-verified section directly below). Sections 4 (multi-node
+rebalance) and the `high`-risk write items remain unrun.
 
-> The code is exercised by a mock-only test suite (`uv run pytest`, no real
-> ceph-mgr). It has not yet been validated end-to-end against a live Ceph
-> cluster. Until it has, we do not claim it works against a real Dashboard API.
-
-This document defines exactly what a live verification run must cover, and the
-criteria for recording this tool as live-verified. It is deliberately
+This document defines exactly what a full live verification run must cover, and
+the criteria for recording this tool as fully live-verified. It is deliberately
 checklist-shaped so the result is reproducible and auditable — not a subjective
 "seems fine".
+
+## ✅ Live-verified against Ceph 18 (reef) Dashboard REST — 2026-07-31
+
+Verified end-to-end against a real ceph-mgr Dashboard REST API (Ceph 18/reef,
+single-OSD demo cluster), driven through the **real governed CLI + MCP path**.
+`doctor` did a real JWT login (`POST /api/auth`); `overview` matched `ceph -s`
+exactly (HEALTH_WARN, 1 OSD up/in, `TOO_FEW_OSDS`); `health detail` decoded
+`POOL_NO_REDUNDANCY` + `TOO_FEW_OSDS`; and a full **write → audit → undo →
+verified restore** loop closed on a real OSD (`osd reweight 0 0.9` → cluster
+reweight `0.89999`, audit row `status=ok`, `undo apply` → back to `1.00000`,
+`effectVerified: true`).
+
+**Three real bugs the mock suite could not see (all fixed + regression-tested):**
+
+1. **`osd df` / `osd tree` leaked a Python dict repr for `host`.** The real
+   Dashboard `/api/osd` returns `host` as a CRUSH *bucket dict*
+   (`{"id": -2, "name": "node1", ...}`), not a string; the code stringified it
+   whole. Now extracts `host["name"]`. (`_host_name` in `ops/osd.py`.)
+2. **`crushWeight` came back `null` on every real cluster.** The real value is
+   nested under `tree.crush_weight`, never top-level; the code only read the
+   top level. Now falls back to the `tree`. (Regression:
+   `test_norm_osd_real_dashboard_shape_*`.)
+3. **CLI-initiated `undo apply` was broken for every write tool** (line-wide, not
+   ceph-specific). `ceph-aiops undo apply` runs in a process that imports only
+   `mcp_server.tools.undo`; every write tool is imported lazily inside its own
+   CLI command, so the inverse was "not registered" and the undo failed.
+   `_resolve_tool` now forces a full server load on a miss. Fixed + regression-
+   tested across **all 24 tools** (`test_resolve_tool_loads_full_registry_*`).
+
+> **How the dashboard was made reachable (image workaround, NOT a tool change).**
+> `quay.io/ceph/demo` (both `:latest` and `:latest-reef`) ships a CherryPy whose
+> package metadata is missing, so `cherrypy.__version__ == "unknown"`;
+> `dashboard/cherrypy_backports.py` then parses that as a pre-9.0 version and
+> imports the long-removed `cherrypy.wsgiserver` → `ModuleNotFoundError`. This is
+> an **upstream demo-image packaging bug**, independent of `ceph-aiops`. Forcing
+> `cherrypy.__version__` to a real value (cheroot 10.x ⇒ cherrypy 18.x) makes the
+> dashboard load and bind :8443. On a real cluster (MicroCeph / cephadm) the
+> metadata is present and no workaround is needed. Sections 4 (multi-node
+> rebalance) and the `high`-risk write items in section 5 remain unrun.
 
 ## What the mock suite already guarantees
 

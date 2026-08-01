@@ -17,21 +17,48 @@ _OSD = "/api/osd"
 _FLAGS = "/api/osd/flags"
 
 
+def _host_name(raw: dict) -> Any:
+    """Extract the OSD's host name from the Dashboard payload.
+
+    The Dashboard's ``/api/osd`` returns ``host`` as a CRUSH bucket *dict*
+    (``{"id": -2, "name": "node1", "type": "host", ...}``), not a bare string —
+    stringifying it whole leaks a Python dict repr into the result. Prefer the
+    bucket's ``name``; tolerate older/flat shapes where ``host`` is already a
+    string. Verified against Ceph 18 (reef) Dashboard REST, 2026-07-31.
+    """
+    host = raw.get("host")
+    if isinstance(host, dict):
+        return host.get("name")
+    if host:
+        return host
+    tree = raw.get("tree") or {}
+    th = tree.get("host")
+    return th.get("name") if isinstance(th, dict) else th
+
+
 def _norm_osd(raw: dict) -> dict:
     """Fold one raw OSD record into the stable inventory shape."""
     stats = raw.get("osd_stats") or raw.get("stats") or {}
     kb = stats.get("kb")
     kb_used = stats.get("kb_used")
     used_pct = round(100.0 * kb_used / kb, 1) if kb and kb_used else None
+    tree = raw.get("tree") or {}
     return {
         "id": raw.get("osd") if raw.get("osd") is not None else raw.get("id"),
         "up": bool(raw.get("up", 0)),
         "in": bool(raw.get("in", 0)),
         "weight": raw.get("weight"),
-        "crushWeight": raw.get("crush_weight"),
+        # crush_weight is nested under ``tree`` on the Dashboard REST (reef);
+        # keep the top-level lookup for flatter/mocked shapes.
+        "crushWeight": raw.get("crush_weight", tree.get("crush_weight")),
         "usedPercent": used_pct,
-        "host": opt_s(raw.get("host") or (raw.get("tree") or {}).get("host")),
-        "deviceClass": opt_s(raw.get("device_class")),
+        "host": opt_s(_host_name(raw)),
+        # Fall back to the tree only when the key is truly ABSENT — an explicit
+        # "" upstream must survive as "" (null-vs-empty invariant), not collapse
+        # to null via a falsy `or`.
+        "deviceClass": opt_s(
+            raw["device_class"] if "device_class" in raw else tree.get("device_class")
+        ),
     }
 
 
@@ -124,6 +151,6 @@ def osd_purge(conn: Any, osd_id: int) -> dict:
     """[WRITE][high] Purge an OSD (destroy + crush rm + auth del). Irreversible."""
     raw = _osd_raw(conn, osd_id)
     prior = {"in": bool(raw.get("in", 0)), "up": bool(raw.get("up", 0)),
-             "host": opt_s(raw.get("host"))}
+             "host": opt_s(_host_name(raw))}
     conn.delete(f"{_OSD}/{_seg(osd_id)}")
     return {"action": "osd_purge", "osdId": osd_id, "priorState": prior}

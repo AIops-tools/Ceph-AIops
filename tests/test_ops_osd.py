@@ -45,6 +45,32 @@ def test_norm_osd_computes_used_percent_and_state():
 
 
 @pytest.mark.unit
+def test_norm_osd_real_dashboard_shape_host_dict_and_nested_crush_weight():
+    """Regression: the reef Dashboard /api/osd shape, verified live 2026-07-31.
+
+    The real Dashboard returns ``host`` as a CRUSH *bucket dict* (not a string)
+    and puts ``crush_weight`` under a nested ``tree`` object — never at the top
+    level. The flat mock shape hid both: ``host`` leaked a Python dict repr and
+    ``crushWeight`` came back null on every real cluster.
+    """
+    from ceph_aiops.ops import osd as ops
+
+    real_row = {
+        "osd": 0, "up": 1, "in": 1, "weight": 1.0,
+        "host": {"id": -2, "name": "node1", "type": "host", "children": [0]},
+        "tree": {"id": 0, "type": "osd", "crush_weight": 0.097686767578125,
+                 "reweight": 1.0, "name": "osd.0"},
+        "osd_stats": {"kb": 1000, "kb_used": 30},
+    }
+    conn = MagicMock(name="conn")
+    conn.get.return_value = [real_row]
+    row = ops.osd_tree(conn)[0]
+    assert row["host"] == "node1", "host must be the bucket name, not a dict repr"
+    assert isinstance(row["host"], str)
+    assert row["crushWeight"] == 0.097686767578125, "crush_weight lives under tree"
+
+
+@pytest.mark.unit
 def test_osd_df_flags_and_sorts_most_full_first():
     from ceph_aiops.ops import osd as ops
 
