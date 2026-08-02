@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — 2026-08-02
+
+### Changed (BREAKING)
+- **Requires MCP SDK 2.0** (`mcp[cli]>=2.0,<3.0`). `mcp.server.fastmcp` no longer exists in 2.0; the server is now built with `MCPServer` and reports its package version in the stdio handshake.
+
+### Fixed
+- **`undo apply` works from the CLI.** Every write tool is imported lazily inside its own CLI command, so a CLI-driven undo ran in a process where the inverse tool was never registered and failed with "inverse tool is not registered" — for every write tool. Only the MCP entry point, which imports the whole server, worked. Found while live-verifying against a real cluster.
+- **An undetermined outcome is audited `unknown`, not `ok`.** The harness only classified a result as undetermined when the payload *also* carried an `error` key, so a write that looked successful but had not been confirmed was recorded as a success.
+- **OSD `host` leaked a Python dict repr and `crushWeight` was always null.** Live-verified against Ceph 18 (reef): `/api/osd` returns `host` as a CRUSH bucket *dict*, not a string, and `crush_weight` is nested under `tree`. Both now read the real shape.
+- `crushWeight` falls back to the tree only when the key is truly **absent**. `.get(k, default)` does not fire its default for a key that exists with a null value, so a build sending `crush_weight: null` at the top level would have reported null while the real number sat in `tree`. Uses `is not None` rather than truthiness, so an explicit `0` — a real CRUSH weight for a draining OSD — survives.
+
+
 ## v0.7.0 — 2026-07-21
 
 ### Changed
