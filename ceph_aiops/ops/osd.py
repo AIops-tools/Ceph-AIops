@@ -49,8 +49,14 @@ def _norm_osd(raw: dict) -> dict:
         "in": bool(raw.get("in", 0)),
         "weight": raw.get("weight"),
         # crush_weight is nested under ``tree`` on the Dashboard REST (reef);
-        # keep the top-level lookup for flatter/mocked shapes.
-        "crushWeight": raw.get("crush_weight", tree.get("crush_weight")),
+        # the top-level lookup is kept for flatter/mocked shapes. Fall back only
+        # when the key is truly ABSENT: ``.get(k, default)`` does NOT fire its
+        # default when the key exists with a null value, so a build that sends
+        # ``crush_weight: null`` at the top level would report null while the
+        # real number sat in ``tree`` — the documented .get-default trap, and
+        # inconsistent with deviceClass below, which already gets this right.
+        "crushWeight": (raw["crush_weight"] if raw.get("crush_weight") is not None
+                        else tree.get("crush_weight")),
         "usedPercent": used_pct,
         "host": opt_s(_host_name(raw)),
         # Fall back to the tree only when the key is truly ABSENT — an explicit

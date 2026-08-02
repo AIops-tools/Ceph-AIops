@@ -290,3 +290,24 @@ def test_reweight_undo_none_without_prior():
 
     assert o._reweight_undo({"osd_id": 1}, {"priorState": {}}) is None
     assert o._reweight_undo({"osd_id": 1}, "not-a-dict") is None
+
+
+@pytest.mark.unit
+def test_crush_weight_falls_back_only_when_the_key_is_truly_absent():
+    """``.get(k, default)`` does NOT fire its default when the key exists with a
+    null value — the trap this line has hit repeatedly. A build that sends
+    ``crush_weight: null`` at the top level while carrying the real number in
+    ``tree`` must report the real number, and an explicit ``0`` (falsy but real)
+    must survive rather than be overridden by the tree.
+    """
+    from ceph_aiops.ops.osd import _norm_osd
+
+    assert _norm_osd({"crush_weight": None,
+                      "tree": {"crush_weight": 1.25}})["crushWeight"] == 1.25
+    assert _norm_osd({"crush_weight": 0.5,
+                      "tree": {"crush_weight": 9}})["crushWeight"] == 0.5
+    assert _norm_osd({"tree": {"crush_weight": 1.25}})["crushWeight"] == 1.25
+    assert _norm_osd({})["crushWeight"] is None
+    # 0 is a real CRUSH weight (a drained OSD), not a missing one.
+    assert _norm_osd({"crush_weight": 0,
+                      "tree": {"crush_weight": 9}})["crushWeight"] == 0
