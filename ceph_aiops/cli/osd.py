@@ -22,6 +22,7 @@ import typer
 from ceph_aiops.cli._common import (
     DryRunOption,
     TargetOption,
+    checked,
     cli_errors,
     console,
     double_confirm,
@@ -78,7 +79,9 @@ def osd_reweight(
             operation="osd_reweight", api_call=f"POST /api/osd/{osd_id}/reweight",
             parameters={"weight": weight})
         return
-    console.print_json(json.dumps(gov.osd_reweight(osd_id=osd_id, weight=weight, target=target)))
+    console.print_json(
+        json.dumps(checked(gov.osd_reweight(osd_id=osd_id, weight=weight, target=target)))
+    )
 
 
 @osd_app.command("out")
@@ -94,7 +97,7 @@ def osd_out(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = 
             parameters={"action": "out"})
         return
     double_confirm("mark out OSD", str(osd_id))
-    console.print_json(json.dumps(gov.osd_mark_out(osd_id=osd_id, target=target)))
+    console.print_json(json.dumps(checked(gov.osd_mark_out(osd_id=osd_id, target=target))))
 
 
 @osd_app.command("purge")
@@ -109,4 +112,4 @@ def osd_purge(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption 
             operation="osd_purge", api_call=f"DELETE /api/osd/{osd_id}")
         return
     double_confirm("purge OSD", str(osd_id))
-    console.print_json(json.dumps(gov.osd_purge(osd_id=osd_id, target=target)))
+    console.print_json(json.dumps(checked(gov.osd_purge(osd_id=osd_id, target=target))))
