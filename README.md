@@ -90,6 +90,21 @@ Totals: **37 tools — 17 read, 18 write, 2 undo.**
 
 ## Quick start
 
+### As a Claude Code plugin
+
+One install gives an agent both the skill and the MCP server:
+
+```
+/plugin marketplace add AIops-tools/marketplace
+/plugin install ceph-aiops@aiops-tools
+```
+
+The MCP server is fetched with [uv](https://docs.astral.sh/uv/) and pinned to the
+package version this plugin declares, so an audit row can be traced back to the
+code that wrote it. Credentials are still configured with `ceph-aiops init` — see below.
+
+### As a CLI or standalone MCP server
+
 ```bash
 uv tool install ceph-aiops          # or: pipx install ceph-aiops
 ceph-aiops init                     # wizard: add a mgr target + store the Dashboard password (encrypted)

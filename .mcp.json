@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ceph-aiops": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "ceph-aiops==0.10.0",
+        "ceph-aiops-mcp"
+      ]
+    }
+  }
+}

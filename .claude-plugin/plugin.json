@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "ceph-aiops",
+  "displayName": "Ceph AIops",
+  "version": "0.10.0",
+  "description": "Governed Ceph mgr ops: HEALTH_WARN RCA, OSD/PG/pool/RBD/CephFS/RGW, 37 tools.",
+  "author": {
+    "name": "Wei Zhou",
+    "email": "zhouwei008@gmail.com",
+    "url": "https://github.com/AIops-tools"
+  },
+  "homepage": "https://github.com/AIops-tools/Ceph-AIops",
+  "repository": "https://github.com/AIops-tools/Ceph-AIops",
+  "license": "MIT",
+  "keywords": [
+    "aiops",
+    "mcp",
+    "governance",
+    "ceph"
+  ]
+}
