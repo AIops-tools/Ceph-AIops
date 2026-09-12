@@ -1,0 +1,20 @@
+{
+  "name": "@aiops-tools/ceph-aiops",
+  "version": "0.11.0",
+  "description": "Governed Ceph mgr ops: HEALTH_WARN RCA, OSD/PG/pool/RBD/CephFS/RGW, 37 tools.",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://github.com/AIops-tools/Ceph-AIops",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AIops-tools/Ceph-AIops.git"
+  },
+  "openclaw": {
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2"
+    },
+    "build": {
+      "openclawVersion": "2026.3.24-beta.2"
+    }
+  }
+}

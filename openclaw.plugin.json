@@ -1,0 +1,24 @@
+{
+  "id": "ceph-aiops",
+  "name": "Ceph AIops",
+  "description": "Governed Ceph mgr ops: HEALTH_WARN RCA, OSD/PG/pool/RBD/CephFS/RGW, 37 tools.",
+  "skills": [
+    "./skills"
+  ],
+  "mcpServers": {
+    "ceph-aiops": {
+      "transport": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "ceph-aiops==0.11.0",
+        "ceph-aiops-mcp"
+      ]
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
