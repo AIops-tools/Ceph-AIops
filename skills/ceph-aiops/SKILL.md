@@ -65,6 +65,13 @@ ceph-aiops init       # interactive wizard: mgr host/port/username + encrypted D
 ceph-aiops doctor
 ```
 
+Or as an OpenClaw plugin, which installs this skill and its MCP server together:
+
+```bash
+openclaw plugins install clawhub:@aiops-tools/ceph-aiops
+openclaw skills info ceph-aiops          # expect: Visible to model: yes
+```
+
 ## When to Use This Skill
 
 - Decode a **HEALTH_WARN/ERR** state (`cluster_health` / `health detail`) — cause + action per active check (`PG_DEGRADED`, `OSD_NEARFULL`, `SLOW_OPS`, `MON_DOWN`, `LARGE_OMAP_OBJECTS`, …)
