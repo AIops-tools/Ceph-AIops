@@ -1,6 +1,6 @@
 {
   "name": "@zw008/ceph-aiops",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "Governed Ceph mgr ops: HEALTH_WARN RCA, OSD/PG/pool/RBD/CephFS/RGW, 37 tools.",
   "private": true,
   "license": "MIT",

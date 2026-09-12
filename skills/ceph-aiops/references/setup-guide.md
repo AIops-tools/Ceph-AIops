@@ -17,9 +17,21 @@ exist:
 
 ```bash
 ceph mgr module enable dashboard
-ceph dashboard ac-user-create <username> -i <password-file> administrator
+# Start read-only. This tool does not decide whether a write is allowed — the
+# Dashboard role does — so the role you pick here IS the authorization boundary.
+ceph dashboard ac-user-create <username> -i <password-file> read-only
 # find the URL/port: ceph mgr services   → e.g. https://<host>:8443/
 ```
+
+Grant `administrator` only if you intend the agent to perform writes (set flags,
+reweight/mark-out/purge OSDs, scrub, pool and RBD create/delete), and prefer a
+dedicated account for it rather than reusing a human's.
+
+> **Which Dashboard role each endpoint needs has not been verified per endpoint
+> against a live cluster** — only that the role, not this tool, is what decides.
+> If a read is refused under `read-only`, that is Ceph's role boundary doing its
+> job: widen the role deliberately, or report the endpoint on the issue tracker
+> so this note can be replaced with a measured list.
 
 ceph-aiops authenticates by exchanging the **username + password** for a
 short-lived **JWT** at `POST /api/auth`; the token is cached in memory and used
@@ -40,8 +52,8 @@ targets:
   - name: ceph1
     host: 10.0.0.30
     port: 8443
-    username: admin
-    verify_ssl: false          # self-signed lab certs only
+    username: ceph-aiops       # the read-only Dashboard user created above
+    verify_ssl: true           # false only for self-signed lab certs
 ```
 
 The `username` lives in the config file (it is not a secret); the password never
