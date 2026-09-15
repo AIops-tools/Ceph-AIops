@@ -6,7 +6,7 @@ import json
 
 import typer
 
-from ceph_aiops.cli._common import TargetOption, cli_errors, console, get_connection
+from ceph_aiops.cli._common import TargetOption, audited, cli_errors, console, get_connection
 
 health_app = typer.Typer(
     name="health",
@@ -17,6 +17,7 @@ health_app = typer.Typer(
 
 @health_app.command("detail")
 @cli_errors
+@audited
 def health_detail(target: TargetOption = None) -> None:
     """HEALTH status with a cause + suggested action per active check."""
     from ceph_aiops.ops import health as ops
@@ -27,6 +28,7 @@ def health_detail(target: TargetOption = None) -> None:
 
 @health_app.command("status")
 @cli_errors
+@audited
 def health_status(target: TargetOption = None) -> None:
     """Compact ceph -s summary (mons, OSDs, PGs, usage)."""
     from ceph_aiops.ops import health as ops

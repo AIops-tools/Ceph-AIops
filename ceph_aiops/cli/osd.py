@@ -22,6 +22,7 @@ import typer
 from ceph_aiops.cli._common import (
     DryRunOption,
     TargetOption,
+    audited,
     checked,
     cli_errors,
     console,
@@ -41,6 +42,7 @@ IdArg = Annotated[int, typer.Argument(help="Numeric OSD id (from 'osd tree')")]
 
 @osd_app.command("tree")
 @cli_errors
+@audited
 def osd_tree(target: TargetOption = None) -> None:
     """List OSDs (up/in, weight, host, device class)."""
     from ceph_aiops.ops import osd as ops
@@ -51,6 +53,7 @@ def osd_tree(target: TargetOption = None) -> None:
 
 @osd_app.command("df")
 @cli_errors
+@audited
 def osd_df(target: TargetOption = None) -> None:
     """Per-OSD utilisation (most-full first)."""
     from ceph_aiops.ops import osd as ops

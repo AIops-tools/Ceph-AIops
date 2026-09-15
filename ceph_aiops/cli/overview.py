@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 
-from ceph_aiops.cli._common import TargetOption, cli_errors, console, get_connection
+from ceph_aiops.cli._common import TargetOption, audited, cli_errors, console, get_connection
 
 
 @cli_errors
+@audited
 def overview_cmd(target: TargetOption = None) -> None:
     """One-shot cluster summary: HEALTH status + active checks + OSD up/in counts."""
     from ceph_aiops.ops import overview as ops
