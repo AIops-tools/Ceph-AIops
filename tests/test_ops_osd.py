@@ -311,3 +311,60 @@ def test_crush_weight_falls_back_only_when_the_key_is_truly_absent():
     # 0 is a real CRUSH weight (a drained OSD), not a missing one.
     assert _norm_osd({"crush_weight": 0,
                       "tree": {"crush_weight": 9}})["crushWeight"] == 0
+
+
+@pytest.mark.unit
+def test_an_osd_whose_state_the_dashboard_omits_reads_as_unknown_not_out():
+    """`bool(raw.get("in", 0))` made an unreported flag indistinguishable from a
+    genuinely out OSD. The positive control matters as much: a real `in: 0` must
+    still read as False, or the fix would just hide real failures."""
+    from ceph_aiops.ops import osd as ops
+
+    conn = MagicMock(name="conn")
+    conn.get.return_value = [
+        {"osd": 7, "weight": 1.0},                      # neither flag reported
+        {"osd": 8, "up": 0, "in": 0, "weight": 0.0},    # genuinely down and out
+    ]
+    rows = {r["id"]: r for r in ops.osd_tree(conn)}
+    assert rows[7]["up"] is None and rows[7]["in"] is None
+    assert rows[8]["up"] is False and rows[8]["in"] is False
+
+
+@pytest.mark.unit
+def test_mark_in_records_no_undo_when_the_prior_state_was_never_reported():
+    """The undo callback offers "mark it out again" on `priorState["in"] is False`.
+    With the old default that fired for an OSD whose `in` flag the Dashboard simply
+    omitted — a replayable write nobody had performed."""
+    from mcp_server.tools.osd import _mark_in_undo
+
+    unknown = {"priorState": {"in": None, "up": None}}
+    assert _mark_in_undo({"osd_id": 7}, unknown) is None
+
+    genuinely_out = {"priorState": {"in": False, "up": True}}
+    descriptor = _mark_in_undo({"osd_id": 8}, genuinely_out)
+    assert descriptor is not None and descriptor["tool"] == "osd_mark_out"
+
+
+@pytest.mark.unit
+def test_mark_and_purge_capture_unknown_prior_state_as_unknown():
+    from ceph_aiops.ops import osd as ops
+
+    conn = MagicMock(name="conn")
+    conn.get.return_value = [{"osd": 7, "weight": 1.0}]
+    assert ops.mark_osd(conn, 7, "in")["priorState"] == {"in": None, "up": None}
+    purged = ops.osd_purge(conn, 7)
+    assert purged["priorState"]["in"] is None and purged["priorState"]["up"] is None
+
+
+@pytest.mark.unit
+def test_overview_counts_osds_whose_state_is_unknown():
+    from ceph_aiops.ops import osd as ops
+
+    conn = MagicMock(name="conn")
+    conn.get.return_value = [
+        {"osd": 0, "up": 1, "in": 1},
+        {"osd": 7},
+    ]
+    rows = ops.osd_tree(conn)
+    unknown = sum(1 for r in rows if r["up"] is None or r["in"] is None)
+    assert unknown == 1

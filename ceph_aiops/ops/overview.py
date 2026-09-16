@@ -34,5 +34,8 @@ def fleet_overview(conn: Any) -> dict:
         "osdsTotal": len(osds),
         "osdsUp": sum(1 for x in osds if x.get("up")),
         "osdsIn": sum(1 for x in osds if x.get("in")),
+        # An OSD whose up/in the Dashboard did not report is counted in neither total;
+        # say how many so the numbers can be read honestly.
+        "osdsStateUnknown": sum(1 for x in osds if x.get("up") is None or x.get("in") is None),
         "errors": errors,
     }

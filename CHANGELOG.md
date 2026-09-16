@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- An OSD whose `up`/`in` flags the Dashboard did not report is no longer stated to
+  be down and out. `bool(raw.get("up", 0))` made an absent flag byte-identical to a
+  genuinely failed OSD; both now read `null`, and `overview` reports how many are in
+  that state as `osdsStateUnknown` so the up/in totals can be read honestly.
+- The same expression built `priorState` for `mark_osd` and `osd_purge`, and the
+  mark-in undo offers "mark it out again" whenever the prior `in` was `False` — so an
+  OSD whose state was merely unreadable got a **replayable undo token for a write
+  nobody performed**, which on replay would have marked a healthy OSD out and started
+  a rebalance. An unknown prior state now registers no undo at all.
+
 ## v0.11.4 — 2026-09-15
 
 ### Fixed

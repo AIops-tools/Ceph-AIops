@@ -36,6 +36,18 @@ def _host_name(raw: dict) -> Any:
     return th.get("name") if isinstance(th, dict) else th
 
 
+def _flag(raw: dict, key: str) -> bool | None:
+    """An OSD's up/in flag, or None when the Dashboard did not report it.
+
+    ``bool(raw.get(key, 0))`` used to answer False for a flag that was simply
+    absent, which is indistinguishable from a genuinely down/out OSD — and, via
+    the mark-in undo callback, produced a replayable "mark it out again" token
+    for an OSD nobody had marked out.
+    """
+    value = raw.get(key)
+    return None if value is None else bool(value)
+
+
 def _norm_osd(raw: dict) -> dict:
     """Fold one raw OSD record into the stable inventory shape."""
     stats = raw.get("osd_stats") or raw.get("stats") or {}
@@ -45,8 +57,8 @@ def _norm_osd(raw: dict) -> dict:
     tree = raw.get("tree") or {}
     return {
         "id": raw.get("osd") if raw.get("osd") is not None else raw.get("id"),
-        "up": bool(raw.get("up", 0)),
-        "in": bool(raw.get("in", 0)),
+        "up": _flag(raw, "up"),
+        "in": _flag(raw, "in"),
         "weight": raw.get("weight"),
         # crush_weight is nested under ``tree`` on the Dashboard REST (reef);
         # the top-level lookup is kept for flatter/mocked shapes. Fall back only
@@ -148,7 +160,7 @@ def preview_reweight(conn: Any, osd_id: int, weight: float) -> dict:
 def mark_osd(conn: Any, osd_id: int, action: str) -> dict:
     """[WRITE] Mark an OSD in/out/down. Captures prior up/in state for undo/audit."""
     raw = _osd_raw(conn, osd_id)
-    prior = {"in": bool(raw.get("in", 0)), "up": bool(raw.get("up", 0))}
+    prior = {"in": _flag(raw, "in"), "up": _flag(raw, "up")}
     conn.post(f"{_OSD}/{_seg(osd_id)}/mark", json={"action": action})
     return {"action": f"mark_osd_{action}", "osdId": osd_id, "priorState": prior}
 
@@ -156,7 +168,7 @@ def mark_osd(conn: Any, osd_id: int, action: str) -> dict:
 def osd_purge(conn: Any, osd_id: int) -> dict:
     """[WRITE][high] Purge an OSD (destroy + crush rm + auth del). Irreversible."""
     raw = _osd_raw(conn, osd_id)
-    prior = {"in": bool(raw.get("in", 0)), "up": bool(raw.get("up", 0)),
+    prior = {"in": _flag(raw, "in"), "up": _flag(raw, "up"),
              "host": opt_s(_host_name(raw))}
     conn.delete(f"{_OSD}/{_seg(osd_id)}")
     return {"action": "osd_purge", "osdId": osd_id, "priorState": prior}
