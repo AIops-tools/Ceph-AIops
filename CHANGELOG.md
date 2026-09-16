@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### Fixed
+- The "confirm before anything destructive" row promised a CLI double confirmation for
+  five tools; only `osd_purge` and `osd_mark_out` have CLI commands. `pool_delete`,
+  `rbd_image_delete`, `rbd_snapshot_delete` and `set_pool_size` are reachable only over
+  MCP, where there is no confirmation step, and the row sat in the table headed "do not
+  waste prompt budget on these". The row now says which tools the confirmation covers,
+  and the copyable system prompt asks the model to confirm the other four itself.
+- The truncation row attributed a `stuck` list to `pg_summary`, which returns `unhealthy`.
 - An OSD whose `up`/`in` flags the Dashboard did not report is no longer stated to
   be down and out. `bool(raw.get("up", 0))` made an absent flag byte-identical to a
   genuinely failed OSD; both now read `null`, and `overview` reports how many are in

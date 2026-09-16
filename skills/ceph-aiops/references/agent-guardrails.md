@@ -30,9 +30,9 @@ What the tool *does* guarantee is that you can always see what happened:
 |---|---|
 | "Log everything you do, over both MCP and the CLI" | Every call is audited to `~/.ceph-aiops/audit.db` regardless of what the model says it did — and the CLI writes the same row the MCP path does, so there is no unaudited entry point. Reversible writes also record an undo token capturing the *prior* state. |
 | "Don't invent a value when a field is missing" | A field the Dashboard did not return comes back as `null`, never as `""`. A missing `deviceClass`, `host`, MDS `state`, or `pg_autoscale_mode` is distinguishable from an empty one in the payload. |
-| "Tell me if the output was cut off" | `pg_summary` and `pg_dump_stuck` return `{"stuck": [...], "returned": N, "limit": L, "truncated": true/false}`. Truncation is measured (one extra row is collected), not guessed. `pg_summary` also keeps `unhealthyCount` as the true total even when the list is capped. |
+| "Tell me if the output was cut off" | `pg_dump_stuck` returns `{"stuck": [...], "returned": N, "limit": L, "truncated": true/false}` and `pg_summary` the same shape under `unhealthy` (plus `states`) — the list key differs, so look it up per tool rather than expecting `stuck` everywhere. Truncation is measured (one extra row is collected), not guessed. `pg_summary` also keeps `unhealthyCount` as the true total even when the list is capped. |
 | "Explain what HEALTH_WARN means" | `cluster_health` already folds each active check code (`PG_DEGRADED`, `OSD_NEARFULL`, `SLOW_OPS`, `LARGE_OMAP_OBJECTS`, …) into a plain-language `cause` and `suggestedAction`. The model should quote those, not compose its own. |
-| "Confirm before anything destructive" | Destructive operations (`osd_purge`, `pool_delete`, `rbd_image_delete`, `rbd_snapshot_delete`, `set_pool_size`) require a `--dry-run`-able preview + double confirmation at the CLI. |
+| "Confirm before anything destructive" | Every destructive tool (`osd_purge`, `osd_mark_out`, `pool_delete`, `rbd_image_delete`, `rbd_snapshot_delete`, `set_pool_size`) takes `dry_run=True` for a preview and is `risk=high`, tagged `review` on its audit row. ⚠️ **The double confirmation is a CLI feature, and only `osd_purge` and `osd_mark_out` have CLI commands** — the other four are reachable only over MCP, where nothing prompts. Keep your own confirmation for those. |
 | "Don't get stuck retrying" | The runaway guard trips a circuit breaker if the same call is hammered in a tight loop — a stuck agent is stopped rather than left to burn calls and time. |
 
 ## What still needs a prompt
@@ -63,6 +63,10 @@ READING RESULTS
   status strings (HEALTH_WARN, active+undersized+degraded), PG ids, or OSD ids.
 - When cluster_health returns findings, quote each finding's "cause" and
   "suggestedAction" rather than composing your own explanation of the check code.
+
+- `pool_delete`, `rbd_image_delete`, `rbd_snapshot_delete` and `set_pool_size` have no CLI
+  command, so nothing will ask you to confirm them. Call them with `dry_run=True` first,
+  show the operator what would change, and wait for an explicit go-ahead.
 
 SCOPE
 - Separate observation from interpretation. State what the tools returned, then
