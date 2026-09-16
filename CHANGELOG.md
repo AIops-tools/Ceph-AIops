@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.11.5 — 2026-09-17
 
 ### Fixed
 - The "confirm before anything destructive" row promised a CLI double confirmation for
