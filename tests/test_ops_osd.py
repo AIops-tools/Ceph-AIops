@@ -189,7 +189,7 @@ def test_osd_raw_raises_keyerror_for_missing_osd():
 
 @pytest.mark.unit
 def test_osd_write_tools_have_correct_risk_tiers():
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     assert o.osd_mark_out._risk_level == "high"
     assert o.osd_purge._risk_level == "high"
@@ -200,7 +200,7 @@ def test_osd_write_tools_have_correct_risk_tiers():
 
 @pytest.mark.unit
 def test_osd_mark_out_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(o, "_get_connection", lambda target=None: conn)
@@ -212,7 +212,7 @@ def test_osd_mark_out_dry_run_does_not_mutate(monkeypatch):
 
 @pytest.mark.unit
 def test_osd_purge_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(o, "_get_connection", lambda target=None: conn)
@@ -224,7 +224,7 @@ def test_osd_purge_dry_run_does_not_mutate(monkeypatch):
 
 @pytest.mark.unit
 def test_osd_reweight_dry_run_reads_current_weight_without_posting(monkeypatch):
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     conn = MagicMock(name="conn")
     conn.get.return_value = _osd_rows()  # OSD 0 has weight 1.0
@@ -239,7 +239,7 @@ def test_osd_reweight_dry_run_reads_current_weight_without_posting(monkeypatch):
 @pytest.mark.unit
 def test_osd_reweight_records_prior_state_undo(monkeypatch):
     import ceph_aiops.governance.undo as undo_mod
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     conn = MagicMock(name="conn")
     conn.get.return_value = _osd_rows()
@@ -265,7 +265,7 @@ def test_osd_reweight_records_prior_state_undo(monkeypatch):
 
 @pytest.mark.unit
 def test_flag_undo_toggles_back():
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     undo = o._flag_undo({"flag": "noout", "enable": True}, {"action": "set_cluster_flag"})
     assert undo["tool"] == "cluster_flag_set"
@@ -274,7 +274,7 @@ def test_flag_undo_toggles_back():
 
 @pytest.mark.unit
 def test_mark_in_undo_only_when_was_out():
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     # OSD was out before → offer mark-out undo.
     undo = o._mark_in_undo({"osd_id": 4}, {"priorState": {"in": False}})
@@ -286,7 +286,7 @@ def test_mark_in_undo_only_when_was_out():
 
 @pytest.mark.unit
 def test_reweight_undo_none_without_prior():
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     assert o._reweight_undo({"osd_id": 1}, {"priorState": {}}) is None
     assert o._reweight_undo({"osd_id": 1}, "not-a-dict") is None
@@ -335,7 +335,7 @@ def test_mark_in_records_no_undo_when_the_prior_state_was_never_reported():
     """The undo callback offers "mark it out again" on `priorState["in"] is False`.
     With the old default that fired for an OSD whose `in` flag the Dashboard simply
     omitted — a replayable write nobody had performed."""
-    from mcp_server.tools.osd import _mark_in_undo
+    from ceph_aiops.mcp_server.tools.osd import _mark_in_undo
 
     unknown = {"priorState": {"in": None, "up": None}}
     assert _mark_in_undo({"osd_id": 7}, unknown) is None

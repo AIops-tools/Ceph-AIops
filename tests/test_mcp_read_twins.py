@@ -17,7 +17,7 @@ def _patch(monkeypatch, module, conn):
 
 @pytest.mark.unit
 def test_pg_read_twins(monkeypatch):
-    from mcp_server.tools import pg
+    from ceph_aiops.mcp_server.tools import pg
 
     conn = MagicMock(name="conn")
     conn.get.return_value = {"pg_info": {"pgs": [
@@ -36,7 +36,7 @@ def test_pg_read_twins(monkeypatch):
 
 @pytest.mark.unit
 def test_clusterops_read_twins(monkeypatch):
-    from mcp_server.tools import clusterops as c
+    from ceph_aiops.mcp_server.tools import clusterops as c
 
     conn = MagicMock(name="conn")
     conn.get.return_value = {
@@ -57,8 +57,8 @@ def test_clusterops_read_twins(monkeypatch):
 
 @pytest.mark.unit
 def test_health_and_filesystem_read_twins(monkeypatch):
-    from mcp_server.tools import filesystem as fs
-    from mcp_server.tools import health as h
+    from ceph_aiops.mcp_server.tools import filesystem as fs
+    from ceph_aiops.mcp_server.tools import health as h
 
     conn = MagicMock(name="conn")
     conn.get.return_value = {"status": "HEALTH_OK", "checks": {}}
@@ -75,9 +75,9 @@ def test_health_and_filesystem_read_twins(monkeypatch):
 
 @pytest.mark.unit
 def test_inventory_read_twins(monkeypatch):
-    from mcp_server.tools import osd as o
-    from mcp_server.tools import pool as p
-    from mcp_server.tools import rbd as r
+    from ceph_aiops.mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import rbd as r
 
     conn = MagicMock(name="conn")
     conn.get.return_value = []

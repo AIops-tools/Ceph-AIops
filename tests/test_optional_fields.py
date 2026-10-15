@@ -158,7 +158,7 @@ def test_pg_summary_truncates_the_unhealthy_list_but_keeps_the_true_count():
 
 @pytest.mark.unit
 def test_undo_list_envelope_measures_truncation(monkeypatch):
-    from mcp_server.tools import undo as undo_tools
+    from ceph_aiops.mcp_server.tools import undo as undo_tools
 
     rows = [
         {

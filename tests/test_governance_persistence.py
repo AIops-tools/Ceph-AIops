@@ -131,7 +131,7 @@ def test_real_write_tool_persists_priorstate_undo(gov_home, monkeypatch):
     conn.get.return_value = [{"osd": 3, "up": 1, "in": 1, "weight": 1.0, "host": "ceph-a"}]
     conn.post.return_value = {}
 
-    from mcp_server.tools import osd as gov
+    from ceph_aiops.mcp_server.tools import osd as gov
 
     monkeypatch.setattr(gov, "_get_connection", lambda target=None: conn)
     result = gov.osd_reweight(osd_id=3, weight=0.0)

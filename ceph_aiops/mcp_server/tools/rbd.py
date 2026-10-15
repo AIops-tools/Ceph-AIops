@@ -8,8 +8,8 @@ lower risk and mutate nothing on dry paths.
 from typing import Optional
 
 from ceph_aiops.governance import governed_tool
+from ceph_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
 from ceph_aiops.ops import rbd as ops
-from mcp_server._shared import _get_connection, mcp, tool_errors
 
 # ── reads ────────────────────────────────────────────────────────────────
 

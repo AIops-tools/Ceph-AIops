@@ -1,7 +1,7 @@
 """``ceph-aiops osd`` — OSD reads + guarded lifecycle writes.
 
 Real writes (reweight, mark-out, purge) are delegated to the
-``@governed_tool``-wrapped functions in ``mcp_server.tools.osd`` so that CLI
+``@governed_tool``-wrapped functions in ``ceph_aiops.mcp_server.tools.osd`` so that CLI
 writes are audited + undo-recorded on the SAME governance path as the MCP tools
 (the CLI keeps its human double-confirm on top).
 
@@ -71,7 +71,7 @@ def osd_reweight(
     dry_run: DryRunOption = False,
 ) -> None:
     """Set an OSD's reweight (0.0 drains it)."""
-    from mcp_server.tools import osd as gov
+    from ceph_aiops.mcp_server.tools import osd as gov
 
     if dry_run:
         # Routed through the governed twin with dry_run=True: the preview reads
@@ -91,7 +91,7 @@ def osd_reweight(
 @cli_errors
 def osd_out(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = False) -> None:
     """Mark an OSD out — drains its data (dry-run + double confirm)."""
-    from mcp_server.tools import osd as gov
+    from ceph_aiops.mcp_server.tools import osd as gov
 
     if dry_run:
         dry_run_preview(
@@ -107,7 +107,7 @@ def osd_out(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = 
 @cli_errors
 def osd_purge(osd_id: IdArg, target: TargetOption = None, dry_run: DryRunOption = False) -> None:
     """Purge an OSD — irreversible (dry-run + double confirm)."""
-    from mcp_server.tools import osd as gov
+    from ceph_aiops.mcp_server.tools import osd as gov
 
     if dry_run:
         dry_run_preview(

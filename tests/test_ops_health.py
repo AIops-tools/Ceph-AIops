@@ -155,7 +155,7 @@ def test_count_helper_handles_non_list():
 
 @pytest.mark.unit
 def test_health_mcp_tools_are_governed_and_low_risk():
-    from mcp_server.tools import health
+    from ceph_aiops.mcp_server.tools import health
 
     assert health.cluster_health._risk_level == "low"
     assert health.cluster_status._risk_level == "low"

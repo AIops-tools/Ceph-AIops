@@ -57,7 +57,7 @@ def test_create_snapshot_posts_to_snap_path():
 
 @pytest.mark.unit
 def test_write_tools_have_correct_risk_tiers():
-    from mcp_server.tools import rbd as r
+    from ceph_aiops.mcp_server.tools import rbd as r
 
     assert r.rbd_image_delete._risk_level == "high"
     assert r.rbd_snapshot_delete._risk_level == "high"
@@ -67,7 +67,7 @@ def test_write_tools_have_correct_risk_tiers():
 
 @pytest.mark.unit
 def test_rbd_image_delete_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import rbd as r
+    from ceph_aiops.mcp_server.tools import rbd as r
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(r, "_get_connection", lambda target=None: conn)

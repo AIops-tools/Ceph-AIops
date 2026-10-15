@@ -57,7 +57,7 @@ def test_set_pool_size_captures_prior_and_puts():
 
 @pytest.mark.unit
 def test_write_tools_have_correct_risk_tiers():
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     assert p.set_pool_size._risk_level == "high"
     assert p.pool_delete._risk_level == "high"
@@ -69,7 +69,7 @@ def test_write_tools_have_correct_risk_tiers():
 
 @pytest.mark.unit
 def test_pool_delete_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(p, "_get_connection", lambda target=None: conn)
@@ -82,7 +82,7 @@ def test_pool_delete_dry_run_does_not_mutate(monkeypatch):
 @pytest.mark.unit
 def test_set_pool_quota_undo_restores_prior(monkeypatch):
     import ceph_aiops.governance.undo as undo_mod
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     conn = MagicMock(name="conn")
     conn.get.return_value = {"quota_max_bytes": 1000, "quota_max_objects": 50}

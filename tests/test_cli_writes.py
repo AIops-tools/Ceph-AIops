@@ -1,7 +1,7 @@
 """CLI write path — preview AND confirmed write, through governance, onto disk.
 
 The CLI write commands delegate BOTH the ``--dry-run`` preview and the real
-execution to the ``@governed_tool`` functions in ``mcp_server.tools``. These
+execution to the ``@governed_tool`` functions in ``ceph_aiops.mcp_server.tools``. These
 tests drive a write command through the dry-run branch and past the
 double-confirm prompts, and assert each really went through the governed path
 (audit row on disk) — the regression test for the "CLI writes were unaudited"
@@ -49,7 +49,7 @@ def _audit_tools(db_path: Path) -> list[str]:
 
 def _mock_conn(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock the governed module's connection with one out-able OSD."""
-    import mcp_server.tools.osd as gov_osd
+    import ceph_aiops.mcp_server.tools.osd as gov_osd
 
     conn = MagicMock(name="conn")
     conn.get.return_value = [{"osd": 3, "up": 1, "in": 1, "weight": 1.0, "host": "ceph-a"}]
@@ -131,7 +131,7 @@ def test_cli_osd_out_dry_run_reports_a_transport_failure_instead_of_a_banner(
 ):
     """A preview that could not reach the cluster knows nothing; it must not
     claim to know what would happen."""
-    import mcp_server.tools.osd as gov_osd
+    import ceph_aiops.mcp_server.tools.osd as gov_osd
     from ceph_aiops.cli import app
 
     def _boom(target=None):

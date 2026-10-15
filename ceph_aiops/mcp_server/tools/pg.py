@@ -9,8 +9,8 @@ risk=medium and are tagged ``[WRITE]`` like every other state-changing tool.
 from typing import Optional
 
 from ceph_aiops.governance import governed_tool
+from ceph_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
 from ceph_aiops.ops import pg as ops
-from mcp_server._shared import _get_connection, mcp, tool_errors
 
 # ── reads ────────────────────────────────────────────────────────────────
 

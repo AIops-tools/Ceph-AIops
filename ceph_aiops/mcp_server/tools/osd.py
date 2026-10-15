@@ -7,8 +7,8 @@ Reweight and mark-in are reversible and record an undo capturing prior state.
 from typing import Any, Optional
 
 from ceph_aiops.governance import governed_tool
+from ceph_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
 from ceph_aiops.ops import osd as ops
-from mcp_server._shared import _get_connection, mcp, tool_errors
 
 
 def _flag_undo(params: dict[str, Any], result: Any) -> Optional[dict]:

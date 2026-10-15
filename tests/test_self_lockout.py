@@ -135,7 +135,7 @@ def test_the_guard_is_reachable_without_performing_the_delete():
 
 def test_the_mcp_dry_run_refuses_a_protected_pool(monkeypatch):
     """A preview must report the refusal, not a green wouldDelete."""
-    from mcp_server.tools import pool as gov
+    from ceph_aiops.mcp_server.tools import pool as gov
 
     conn = _conn()
     monkeypatch.setattr(gov, "_get_connection", lambda target=None: conn)
@@ -146,7 +146,7 @@ def test_the_mcp_dry_run_refuses_a_protected_pool(monkeypatch):
 
 
 def test_the_mcp_dry_run_still_previews_an_ordinary_pool(monkeypatch):
-    from mcp_server.tools import pool as gov
+    from ceph_aiops.mcp_server.tools import pool as gov
 
     conn = _conn()
     monkeypatch.setattr(gov, "_get_connection", lambda target=None: conn)
@@ -279,7 +279,7 @@ def test_the_size_guard_is_reachable_without_performing_the_write():
 
 def test_the_mcp_dry_run_refuses_a_protected_size_reduction(monkeypatch):
     """A preview must report the refusal, not a green wouldSetSize."""
-    from mcp_server.tools import pool as gov
+    from ceph_aiops.mcp_server.tools import pool as gov
 
     conn = _sized_conn(size=3)
     monkeypatch.setattr(gov, "_get_connection", lambda target=None: conn)
@@ -290,7 +290,7 @@ def test_the_mcp_dry_run_refuses_a_protected_size_reduction(monkeypatch):
 
 
 def test_the_mcp_dry_run_still_previews_an_allowed_increase(monkeypatch):
-    from mcp_server.tools import pool as gov
+    from ceph_aiops.mcp_server.tools import pool as gov
 
     conn = _sized_conn(size=2)
     monkeypatch.setattr(gov, "_get_connection", lambda target=None: conn)

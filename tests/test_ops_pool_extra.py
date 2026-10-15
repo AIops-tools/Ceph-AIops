@@ -143,7 +143,7 @@ def test_delete_pool_captures_prior_and_deletes():
 
 @pytest.mark.unit
 def test_set_pool_size_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(p, "_get_connection", lambda target=None: conn)
@@ -155,7 +155,7 @@ def test_set_pool_size_dry_run_does_not_mutate(monkeypatch):
 
 @pytest.mark.unit
 def test_pool_create_via_governed_twin(monkeypatch):
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     conn = MagicMock(name="conn")
     conn.post.return_value = {}
@@ -168,7 +168,7 @@ def test_pool_create_via_governed_twin(monkeypatch):
 @pytest.mark.unit
 def test_set_pool_pg_num_records_prior_state_undo(monkeypatch):
     import ceph_aiops.governance.undo as undo_mod
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     conn = MagicMock(name="conn")
     conn.get.return_value = {"pg_num": 128}
@@ -192,7 +192,7 @@ def test_set_pool_pg_num_records_prior_state_undo(monkeypatch):
 
 @pytest.mark.unit
 def test_pgnum_undo_none_without_prior():
-    from mcp_server.tools import pool as p
+    from ceph_aiops.mcp_server.tools import pool as p
 
     assert p._pgnum_undo({"pool_name": "x"}, {"priorState": {}}) is None
     assert p._autoscale_undo({"pool_name": "x"}, {"priorState": {}}) is None

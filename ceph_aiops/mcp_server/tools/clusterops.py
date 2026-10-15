@@ -9,8 +9,8 @@ restoring the prior config values captured in priorState.
 from typing import Any, Optional
 
 from ceph_aiops.governance import governed_tool
+from ceph_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
 from ceph_aiops.ops import clusterops as ops
-from mcp_server._shared import _get_connection, mcp, tool_errors
 
 
 def _throttle_undo(params: dict[str, Any], result: Any) -> Optional[dict]:

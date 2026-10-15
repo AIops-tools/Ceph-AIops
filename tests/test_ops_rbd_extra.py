@@ -73,7 +73,7 @@ def test_spec_url_encodes_hostile_names():
 
 @pytest.mark.unit
 def test_rbd_snapshot_delete_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import rbd as r
+    from ceph_aiops.mcp_server.tools import rbd as r
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(r, "_get_connection", lambda target=None: conn)
@@ -86,7 +86,7 @@ def test_rbd_snapshot_delete_dry_run_does_not_mutate(monkeypatch):
 
 @pytest.mark.unit
 def test_rbd_image_create_via_governed_twin(monkeypatch):
-    from mcp_server.tools import rbd as r
+    from ceph_aiops.mcp_server.tools import rbd as r
 
     conn = MagicMock(name="conn")
     conn.post.return_value = {}

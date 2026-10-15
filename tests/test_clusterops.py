@@ -85,7 +85,7 @@ def test_slow_ops_parses_check_and_zero_when_absent():
 
 @pytest.mark.unit
 def test_throttle_recovery_risk_and_prior_state_undo():
-    from mcp_server.tools import clusterops
+    from ceph_aiops.mcp_server.tools import clusterops
 
     assert clusterops.throttle_recovery._risk_level == "medium"
 

@@ -8,8 +8,8 @@ pg_num / autoscale / size are reversible and record an undo capturing prior stat
 from typing import Any, Optional
 
 from ceph_aiops.governance import governed_tool
+from ceph_aiops.mcp_server._shared import _get_connection, mcp, tool_errors
 from ceph_aiops.ops import pool as ops
-from mcp_server._shared import _get_connection, mcp, tool_errors
 
 
 def _quota_undo(params: dict[str, Any], result: Any) -> Optional[dict]:

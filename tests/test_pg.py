@@ -60,7 +60,7 @@ def test_trigger_scrub_posts_to_scrub_path():
 
 @pytest.mark.unit
 def test_scrub_write_tools_have_correct_risk_tiers():
-    from mcp_server.tools import pg
+    from ceph_aiops.mcp_server.tools import pg
 
     assert pg.trigger_scrub._risk_level == "medium"  # a write (non-low risk_level)
     assert pg.trigger_deep_scrub._risk_level == "medium"

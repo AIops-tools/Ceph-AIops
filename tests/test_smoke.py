@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 from typer.testing import CliRunner
 
-# Kept in sync with mcp_server/server.py (the full registered tool surface).
+# Kept in sync with ceph_aiops/mcp_server/server.py (the full registered tool surface).
 EXPECTED_TOOLS = {
     # health
     "cluster_health", "cluster_status",
@@ -46,8 +46,8 @@ def test_all_modules_import():
         "ceph_aiops.cli", "ceph_aiops.cli._root", "ceph_aiops.cli._common",
         "ceph_aiops.cli.init", "ceph_aiops.cli.secret", "ceph_aiops.cli.health",
         "ceph_aiops.cli.osd", "ceph_aiops.cli.overview", "ceph_aiops.cli.doctor",
-        "mcp_server.server", "mcp_server._shared",
-        "mcp_server.tools.health", "mcp_server.tools.osd",
+        "ceph_aiops.mcp_server.server", "ceph_aiops.mcp_server._shared",
+        "ceph_aiops.mcp_server.tools.health", "ceph_aiops.mcp_server.tools.osd",
     ):
         importlib.import_module(name)
 
@@ -96,7 +96,7 @@ def test_cli_leaf_help_triggers_lazy_imports():
 
 @pytest.mark.unit
 def test_mcp_list_tools_exposes_expected_tools():
-    from mcp_server.server import mcp
+    from ceph_aiops.mcp_server.server import mcp
 
     tools = asyncio.run(mcp.list_tools())
     names = {t.name for t in tools}
@@ -105,7 +105,7 @@ def test_mcp_list_tools_exposes_expected_tools():
 
 @pytest.mark.unit
 def test_every_mcp_tool_is_governed_by_harness():
-    from mcp_server import _shared
+    from ceph_aiops.mcp_server import _shared
 
     tool_objs = _shared.mcp._tool_manager._tools
     assert EXPECTED_TOOLS <= set(tool_objs), "tool registry incomplete"
@@ -117,7 +117,7 @@ def test_every_mcp_tool_is_governed_by_harness():
 
 @pytest.mark.unit
 def test_write_tools_have_correct_risk_tiers():
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     assert o.cluster_flag_set._risk_level == "medium"  # a write (non-low risk_level)
     assert o.osd_reweight._risk_level == "medium"
@@ -215,7 +215,7 @@ def _osd_map():
 @pytest.mark.unit
 def test_osd_reweight_captures_prior_and_records_undo(monkeypatch):
     import ceph_aiops.governance.undo as undo_mod
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     conn = MagicMock(name="conn")
     conn.get.return_value = _osd_map()
@@ -240,7 +240,7 @@ def test_osd_reweight_captures_prior_and_records_undo(monkeypatch):
 
 @pytest.mark.unit
 def test_osd_purge_dry_run_does_not_mutate(monkeypatch):
-    from mcp_server.tools import osd as o
+    from ceph_aiops.mcp_server.tools import osd as o
 
     conn = MagicMock(name="conn")
     monkeypatch.setattr(o, "_get_connection", lambda target=None: conn)
@@ -254,7 +254,7 @@ def test_cli_osd_purge_dry_run_gates(monkeypatch, tmp_path):
     """The preview runs the governed twin (hence the mocked connection) and
     renders the banner instead of deleting anything."""
     import ceph_aiops.governance.audit as audit_mod
-    import mcp_server.tools.osd as gov_osd
+    import ceph_aiops.mcp_server.tools.osd as gov_osd
     from ceph_aiops.cli import app
 
     monkeypatch.setenv("CEPH_AIOPS_HOME", str(tmp_path))
@@ -295,7 +295,7 @@ def test_risk_level_agrees_with_read_write_docstring_tag():
     16 such mislabels line-wide once, so it is kept even though read-only mode
     (its original motivation) is gone.
     """
-    from mcp_server import server
+    from ceph_aiops.mcp_server import server
 
     untagged, mismatched = [], []
     for name, tool in server.mcp._tool_manager._tools.items():

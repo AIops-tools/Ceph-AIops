@@ -83,7 +83,7 @@ def test_rgw_status_returns_daemons_and_is_partial_safe():
 
 @pytest.mark.unit
 def test_filesystem_tools_are_governed_and_low_risk():
-    from mcp_server.tools import filesystem
+    from ceph_aiops.mcp_server.tools import filesystem
 
     assert filesystem.cephfs_status._risk_level == "low"
     assert filesystem.rgw_status._risk_level == "low"
