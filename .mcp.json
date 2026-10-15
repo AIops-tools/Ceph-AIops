@@ -5,7 +5,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "ceph-aiops==0.11.5",
+        "ceph-aiops==0.12.0",
         "ceph-aiops-mcp"
       ]
     }
