@@ -31,6 +31,8 @@ compatibility: >
 
 # Ceph AIops
 
+> **Audit availability:** Real writes require a durable audit intent. Reads and previews can continue if audit storage fails; check the warning and audit health before relying on their audit trail.
+
 > **Disclaimer**: Community-maintained open-source project, **not affiliated with, endorsed by, or sponsored by the Ceph project or any storage vendor.** Product and trademark names belong to their owners. Source at [github.com/AIops-tools/Ceph-AIops](https://github.com/AIops-tools/Ceph-AIops) under the MIT license.
 
 Governed Ceph operations via the **ceph-mgr Dashboard REST API** — **37 MCP tools**, every one wrapped with the bundled `@governed_tool` harness: a local unified audit log under `~/.ceph-aiops/`, token/runaway budget guard, undo-token recording, and descriptive risk tiers. The Dashboard password is stored **encrypted** (`~/.ceph-aiops/secrets.enc`, Fernet + scrypt) — never plaintext on disk. The flagship `cluster_health` turns raw HEALTH_WARN/ERR check codes into plain-language cause + suggested action.
@@ -137,7 +139,7 @@ of the account you connect it with (a ceph-mgr Dashboard account with a
 read-only role — writes then fail at the mgr). There is no read-only switch,
 policy file, or approval gate.
 
-- **Audit is the guarantee, and it is not bypassable.** Every operation — MCP and CLI alike — is logged to `~/.ceph-aiops/audit.db` (relocatable via `CEPH_AIOPS_HOME`): params, result, status, duration, and the risk tier. The CLI writes the same row the MCP path does.
+- **Audit is the guarantee, and it is not bypassable.** Every operation — MCP and CLI alike — is logged to `~/.ceph-aiops/audit.db` (relocatable via `CEPH_AIOPS_HOME`): params, outcome summary, status, duration, and the risk tier. The CLI writes the same row the MCP path does.
 - `CEPH_AUDIT_APPROVED_BY` / `CEPH_AUDIT_RATIONALE` are optional annotations recorded on the audit row (who/why); they are never required and never block.
 - **Runaway guard** — a safety backstop, not authorization: the same call looped in a tight window trips a circuit breaker. Disable with `CEPH_RUNAWAY_MAX=0`.
 - Destructive writes support `--dry-run` / `dry_run=True` and double confirmation at the CLI.
